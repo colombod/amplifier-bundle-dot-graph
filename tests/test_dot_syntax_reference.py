@@ -3,10 +3,28 @@ Tests for docs/DOT-SYNTAX-REFERENCE.md existence and required content.
 TDD: This test is written BEFORE the docs/DOT-SYNTAX-REFERENCE.md file is created.
 """
 
+import pytest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 DOT_SYNTAX_REF_PATH = REPO_ROOT / "docs" / "DOT-SYNTAX-REFERENCE.md"
+
+# Minimum threshold constants for attribute/element presence checks
+MIN_TABLE_ROWS = 10
+MIN_BASIC_SHAPES = 6
+MIN_EXTENDED_SHAPES = 5
+MIN_NODE_ATTRS = 12
+MIN_EDGE_ATTRS = 10
+MIN_GRAPH_ATTRS = 12
+MIN_HTML_ELEMENTS = 7
+MIN_LAYOUT_ENGINES = 7
+MIN_OUTPUT_FORMATS = 4
+
+
+@pytest.fixture(scope="module")
+def doc_content():
+    """Read DOT-SYNTAX-REFERENCE.md once per test module."""
+    return DOT_SYNTAX_REF_PATH.read_text()
 
 
 # --- File existence and size ---
@@ -19,10 +37,9 @@ def test_dot_syntax_reference_exists():
     )
 
 
-def test_dot_syntax_reference_line_count_in_range():
+def test_dot_syntax_reference_line_count_in_range(doc_content):
     """File must be approximately 350-400 lines (±15% tolerance)."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    lines = content.splitlines()
+    lines = doc_content.splitlines()
     assert 300 <= len(lines) <= 450, (
         f"Expected 300-450 lines (target 350-400), got {len(lines)}"
     )
@@ -31,78 +48,73 @@ def test_dot_syntax_reference_line_count_in_range():
 # --- Grammar section ---
 
 
-def test_has_grammar_section():
+def test_has_grammar_section(doc_content):
     """File must contain a Grammar section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Grammar" in content, "Must contain a Grammar section"
+    assert "Grammar" in doc_content, "Must contain a Grammar section"
 
 
-def test_has_bnf_abstract_grammar():
+def test_has_bnf_abstract_grammar(doc_content):
     """Grammar section must include BNF abstract grammar."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "stmt_list" in content, "Must include BNF grammar with stmt_list"
-    assert "edgeRHS" in content, "Must include BNF grammar with edgeRHS"
-    assert "compass_pt" in content, "Must include BNF grammar with compass_pt"
+    assert "stmt_list" in doc_content, "Must include BNF grammar with stmt_list"
+    assert "edgeRHS" in doc_content, "Must include BNF grammar with edgeRHS"
+    assert "compass_pt" in doc_content, "Must include BNF grammar with compass_pt"
 
 
-def test_has_graph_types_table():
+def test_has_graph_types_table(doc_content):
     """Must have a Graph Types table covering digraph/graph/strict variants."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "digraph" in content, "Must mention digraph"
-    assert "strict" in content, "Must mention strict graph variant"
+    assert "digraph" in doc_content, "Must mention digraph"
+    assert "strict" in doc_content, "Must mention strict graph variant"
     # Must have a table (pipe-delimited rows)
-    pipe_lines = [ln for ln in content.splitlines() if ln.strip().startswith("|")]
-    assert len(pipe_lines) >= 10, (
-        f"Expected at least 10 table rows total, got {len(pipe_lines)}"
+    pipe_lines = [ln for ln in doc_content.splitlines() if ln.strip().startswith("|")]
+    assert len(pipe_lines) >= MIN_TABLE_ROWS, (
+        f"Expected at least {MIN_TABLE_ROWS} table rows total, got {len(pipe_lines)}"
     )
 
 
-def test_has_id_types_table():
+def test_has_id_types_table(doc_content):
     """Must have an ID Types table with alphanumeric/numeral/quoted/HTML types."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "alphanumeric" in content.lower() or "Alphabetic" in content, (
+    assert "alphanumeric" in doc_content.lower() or "Alphabetic" in doc_content, (
         "Must mention alphanumeric/alphabetic ID type"
     )
-    assert "numeral" in content.lower() or "Numeral" in content, (
+    assert "numeral" in doc_content.lower() or "Numeral" in doc_content, (
         "Must mention numeral ID type"
     )
-    assert "quoted" in content.lower() or "Double-quoted" in content, (
+    assert "quoted" in doc_content.lower() or "Double-quoted" in doc_content, (
         "Must mention quoted string ID type"
     )
-    assert "HTML" in content, "Must mention HTML ID type"
+    assert "HTML" in doc_content, "Must mention HTML ID type"
 
 
-def test_has_case_insensitive_keywords():
+def test_has_case_insensitive_keywords(doc_content):
     """Must mention case-insensitive keywords."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     assert (
-        "case-insensitive" in content.lower() or "case insensitive" in content.lower()
+        "case-insensitive" in doc_content.lower()
+        or "case insensitive" in doc_content.lower()
     ), "Must mention that keywords are case-insensitive"
 
 
 # --- Nodes section ---
 
 
-def test_has_nodes_section():
+def test_has_nodes_section(doc_content):
     """File must contain a Nodes section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Nodes" in content or "Node" in content, "Must contain a Nodes section"
+    assert "Nodes" in doc_content or "Node" in doc_content, (
+        "Must contain a Nodes section"
+    )
 
 
-def test_has_node_declaration_examples():
+def test_has_node_declaration_examples(doc_content):
     """Nodes section must include implicit/explicit/multi-attribute declaration examples."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "implicit" in content.lower() or "Implicit" in content, (
+    assert "implicit" in doc_content.lower() or "Implicit" in doc_content, (
         "Must show implicit node declaration"
     )
-    assert "explicit" in content.lower() or "Explicit" in content, (
+    assert "explicit" in doc_content.lower() or "Explicit" in doc_content, (
         "Must show explicit node declaration"
     )
 
 
-def test_has_basic_shapes_table():
+def test_has_basic_shapes_table(doc_content):
     """Must have a Basic Shapes table with at least 8 shapes."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     basic_shapes = [
         "box",
         "ellipse",
@@ -113,13 +125,14 @@ def test_has_basic_shapes_table():
         "plaintext",
         "none",
     ]
-    found = sum(1 for s in basic_shapes if s in content)
-    assert found >= 6, f"Expected at least 6 of the 8 basic shapes, found {found}"
+    found = sum(1 for s in basic_shapes if s in doc_content)
+    assert found >= MIN_BASIC_SHAPES, (
+        f"Expected at least {MIN_BASIC_SHAPES} of the 8 basic shapes, found {found}"
+    )
 
 
-def test_has_extended_shapes_table():
+def test_has_extended_shapes_table(doc_content):
     """Must have Extended Shapes table with shapes like cylinder, folder, note, etc."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     extended_shapes = [
         "cylinder",
         "folder",
@@ -129,21 +142,21 @@ def test_has_extended_shapes_table():
         "hexagon",
         "doublecircle",
     ]
-    found = sum(1 for s in extended_shapes if s in content)
-    assert found >= 5, f"Expected at least 5 extended shapes, found {found}"
+    found = sum(1 for s in extended_shapes if s in doc_content)
+    assert found >= MIN_EXTENDED_SHAPES, (
+        f"Expected at least {MIN_EXTENDED_SHAPES} extended shapes, found {found}"
+    )
 
 
-def test_has_special_shapes_including_record():
+def test_has_special_shapes_including_record(doc_content):
     """Must mention special shapes including deprecated record."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "record" in content, (
+    assert "record" in doc_content, (
         "Must mention 'record' shape (including deprecated note)"
     )
 
 
-def test_has_node_style_attributes():
+def test_has_node_style_attributes(doc_content):
     """Must have Node Style Attributes table with at least 16 attributes."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     node_attrs = [
         "label",
         "shape",
@@ -162,31 +175,30 @@ def test_has_node_style_attributes():
         "margin",
         "peripheries",
     ]
-    found = sum(1 for a in node_attrs if a in content)
-    assert found >= 12, (
-        f"Expected at least 12 of 16 node style attributes, found {found}"
+    found = sum(1 for a in node_attrs if a in doc_content)
+    assert found >= MIN_NODE_ATTRS, (
+        f"Expected at least {MIN_NODE_ATTRS} of 16 node style attributes, found {found}"
     )
 
 
 # --- Edges section ---
 
 
-def test_has_edges_section():
+def test_has_edges_section(doc_content):
     """File must contain an Edges section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Edge" in content or "Edges" in content, "Must contain an Edges section"
+    assert "Edge" in doc_content or "Edges" in doc_content, (
+        "Must contain an Edges section"
+    )
 
 
-def test_has_edge_declaration_examples():
+def test_has_edge_declaration_examples(doc_content):
     """Must show edge declaration examples: simple, attributed, chain, fan-out."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "->" in content, "Must show directed edge operator '->'"
-    assert "--" in content, "Must show undirected edge operator '--'"
+    assert "->" in doc_content, "Must show directed edge operator '->'"
+    assert "--" in doc_content, "Must show undirected edge operator '--'"
 
 
-def test_has_edge_attributes_table():
+def test_has_edge_attributes_table(doc_content):
     """Must have an Edge Attributes table with at least 14 attributes."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     edge_attrs = [
         "label",
         "color",
@@ -203,24 +215,24 @@ def test_has_edge_attributes_table():
         "ltail",
         "lhead",
     ]
-    found = sum(1 for a in edge_attrs if a in content)
-    assert found >= 10, f"Expected at least 10 of 14 edge attributes, found {found}"
+    found = sum(1 for a in edge_attrs if a in doc_content)
+    assert found >= MIN_EDGE_ATTRS, (
+        f"Expected at least {MIN_EDGE_ATTRS} of 14 edge attributes, found {found}"
+    )
 
 
 # --- Graph Attributes section ---
 
 
-def test_has_graph_attributes_section():
+def test_has_graph_attributes_section(doc_content):
     """File must contain a Graph Attributes section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Graph Attribute" in content or "graph attribute" in content.lower(), (
-        "Must contain Graph Attributes section"
-    )
+    assert (
+        "Graph Attribute" in doc_content or "graph attribute" in doc_content.lower()
+    ), "Must contain Graph Attributes section"
 
 
-def test_has_common_graph_attributes():
+def test_has_common_graph_attributes(doc_content):
     """Must have Common Graph Attributes table with at least 17 attributes."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     graph_attrs = [
         "rankdir",
         "ranksep",
@@ -240,17 +252,18 @@ def test_has_common_graph_attributes():
         "overlap",
         "dpi",
     ]
-    found = sum(1 for a in graph_attrs if a in content)
-    assert found >= 12, f"Expected at least 12 of 17 graph attributes, found {found}"
+    found = sum(1 for a in graph_attrs if a in doc_content)
+    assert found >= MIN_GRAPH_ATTRS, (
+        f"Expected at least {MIN_GRAPH_ATTRS} of 17 graph attributes, found {found}"
+    )
 
 
-def test_has_default_attribute_statements():
+def test_has_default_attribute_statements(doc_content):
     """Must show Default Attribute Statements examples."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "node [" in content or "node[" in content, (
+    assert "node [" in doc_content or "node[" in doc_content, (
         "Must show default node attribute statement"
     )
-    assert "edge [" in content or "edge[" in content, (
+    assert "edge [" in doc_content or "edge[" in doc_content, (
         "Must show default edge attribute statement"
     )
 
@@ -258,34 +271,30 @@ def test_has_default_attribute_statements():
 # --- Subgraphs and Clusters section ---
 
 
-def test_has_subgraphs_section():
+def test_has_subgraphs_section(doc_content):
     """File must contain a Subgraphs section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Subgraph" in content or "subgraph" in content, (
+    assert "Subgraph" in doc_content or "subgraph" in doc_content, (
         "Must contain Subgraphs section"
     )
 
 
-def test_has_cluster_naming_requirement():
+def test_has_cluster_naming_requirement(doc_content):
     """Must show cluster subgraph naming requirement (cluster_ prefix)."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "cluster_" in content, "Must show cluster_ naming convention"
+    assert "cluster_" in doc_content, "Must show cluster_ naming convention"
 
 
-def test_has_rank_control():
+def test_has_rank_control(doc_content):
     """Must cover rank control with rank=same/min/max/source/sink."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "rank=same" in content or "rank=min" in content, (
+    assert "rank=same" in doc_content or "rank=min" in doc_content, (
         "Must show rank control subgraphs"
     )
     for rank_val in ["same", "min", "max", "source", "sink"]:
-        assert rank_val in content, f"Must mention rank={rank_val}"
+        assert rank_val in doc_content, f"Must mention rank={rank_val}"
 
 
-def test_has_compound_edges():
+def test_has_compound_edges(doc_content):
     """Must cover edges between clusters with compound=true."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "compound=true" in content or "compound" in content, (
+    assert "compound=true" in doc_content or "compound" in doc_content, (
         "Must mention compound edges between clusters"
     )
 
@@ -293,43 +302,43 @@ def test_has_compound_edges():
 # --- HTML Labels section ---
 
 
-def test_has_html_labels_section():
+def test_has_html_labels_section(doc_content):
     """File must contain an HTML Labels section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "HTML" in content and "Label" in content, "Must contain HTML Labels section"
+    assert "HTML" in doc_content and "Label" in doc_content, (
+        "Must contain HTML Labels section"
+    )
 
 
-def test_has_html_table_example():
+def test_has_html_table_example(doc_content):
     """Must contain a TABLE/TR/TD example with PORT connections."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "TABLE" in content, "Must show TABLE element"
-    assert "<TR>" in content or "TR" in content, "Must show TR element"
-    assert "<TD" in content or "TD" in content, "Must show TD element"
-    assert "PORT" in content, "Must show PORT connections"
+    assert "TABLE" in doc_content, "Must show TABLE element"
+    assert "<TR>" in doc_content or "TR" in doc_content, "Must show TR element"
+    assert "<TD" in doc_content or "TD" in doc_content, "Must show TD element"
+    assert "PORT" in doc_content, "Must show PORT connections"
 
 
-def test_has_html_elements_table():
+def test_has_html_elements_table(doc_content):
     """Must have a Supported HTML Elements table with at least 9 elements."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     html_elements = ["TABLE", "TR", "TD", "FONT", "BR", "HR", "IMG", "<B>", "<I>"]
-    found = sum(1 for e in html_elements if e in content)
-    assert found >= 7, f"Expected at least 7 of 9 HTML elements, found {found}"
+    found = sum(1 for e in html_elements if e in doc_content)
+    assert found >= MIN_HTML_ELEMENTS, (
+        f"Expected at least {MIN_HTML_ELEMENTS} of 9 HTML elements, found {found}"
+    )
 
 
 # --- Ports and Compass Points section ---
 
 
-def test_has_ports_section():
+def test_has_ports_section(doc_content):
     """File must contain a Ports and Compass Points section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Compass" in content or "compass" in content, (
+    assert "Compass" in doc_content or "compass" in doc_content, (
         "Must contain Ports and Compass Points section"
     )
 
 
-def test_has_compass_points():
+def test_has_compass_points(doc_content):
     """Must show all 8 compass points."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
+    content = doc_content
     # All 8 compass points are abbreviated — verify key ones are mentioned
     assert "ne" in content and "sw" in content and "nw" in content, (
         "Must show compass points ne, sw, nw at minimum"
@@ -339,26 +348,25 @@ def test_has_compass_points():
 # --- Layout Engines section ---
 
 
-def test_has_layout_engines_section():
+def test_has_layout_engines_section(doc_content):
     """File must contain a Layout Engines section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Layout Engine" in content or "Layout engine" in content, (
+    assert "Layout Engine" in doc_content or "Layout engine" in doc_content, (
         "Must contain Layout Engines section"
     )
 
 
-def test_has_eight_engines_table():
+def test_has_eight_engines_table(doc_content):
     """Must have table of 8 layout engines with algorithm descriptions."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     engines = ["dot", "neato", "fdp", "sfdp", "twopi", "circo", "osage", "patchwork"]
-    found = sum(1 for e in engines if e in content)
-    assert found >= 7, f"Expected at least 7 of 8 layout engines, found {found}"
+    found = sum(1 for e in engines if e in doc_content)
+    assert found >= MIN_LAYOUT_ENGINES, (
+        f"Expected at least {MIN_LAYOUT_ENGINES} of 8 layout engines, found {found}"
+    )
 
 
-def test_has_engine_selection_heuristic():
+def test_has_engine_selection_heuristic(doc_content):
     """Must include an engine selection heuristic/guide."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "DAG" in content or "hierarchy" in content.lower(), (
+    assert "DAG" in doc_content or "hierarchy" in doc_content.lower(), (
         "Must include engine selection guidance"
     )
 
@@ -366,60 +374,57 @@ def test_has_engine_selection_heuristic():
 # --- Output Formats section ---
 
 
-def test_has_output_formats_section():
+def test_has_output_formats_section(doc_content):
     """File must contain an Output Formats section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Output Format" in content or "output format" in content.lower(), (
+    assert "Output Format" in doc_content or "output format" in doc_content.lower(), (
         "Must contain Output Formats section"
     )
 
 
-def test_has_five_primary_formats():
+def test_has_five_primary_formats(doc_content):
     """Must have table of 5 primary output formats."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
     formats = ["SVG", "PNG", "PDF", "JSON", "DOT"]
-    found = sum(1 for f in formats if f in content)
-    assert found >= 4, f"Expected at least 4 of 5 output formats, found {found}"
+    found = sum(1 for f in formats if f in doc_content)
+    assert found >= MIN_OUTPUT_FORMATS, (
+        f"Expected at least {MIN_OUTPUT_FORMATS} of 5 output formats, found {found}"
+    )
 
 
-def test_has_rendering_commands():
+def test_has_rendering_commands(doc_content):
     """Must include rendering commands with validation and statistics."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "-T" in content, "Must show -T flag for output format selection"
-    assert "dot -T" in content or "dot -" in content, "Must show dot rendering commands"
+    assert "-T" in doc_content, "Must show -T flag for output format selection"
+    assert "dot -T" in doc_content or "dot -" in doc_content, (
+        "Must show dot rendering commands"
+    )
 
 
 # --- Color Specification section ---
 
 
-def test_has_color_specification_section():
+def test_has_color_specification_section(doc_content):
     """File must contain a Color Specification section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "Color" in content, "Must contain Color Specification section"
+    assert "Color" in doc_content, "Must contain Color Specification section"
 
 
-def test_has_color_formats():
+def test_has_color_formats(doc_content):
     """Must cover name/hex/hex+alpha/HSV/color lists."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "#" in content, "Must show hex color format"
-    assert "HSV" in content or "hsv" in content, "Must mention HSV color format"
+    assert "#" in doc_content, "Must show hex color format"
+    assert "HSV" in doc_content or "hsv" in doc_content, "Must mention HSV color format"
 
 
 # --- String Features section ---
 
 
-def test_has_string_features_section():
+def test_has_string_features_section(doc_content):
     """File must contain a String Features section."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "String" in content, "Must contain String Features section"
+    assert "String" in doc_content, "Must contain String Features section"
 
 
-def test_has_string_features():
+def test_has_string_features(doc_content):
     """Must cover newlines, concatenation, escapes, justification."""
-    content = DOT_SYNTAX_REF_PATH.read_text()
-    assert "\\n" in content or "newline" in content.lower(), (
+    assert "\\n" in doc_content or "newline" in doc_content.lower(), (
         "Must mention newlines in string features"
     )
-    assert "concatenat" in content.lower() or "+" in content, (
+    assert "concatenat" in doc_content.lower() or "+" in doc_content, (
         "Must mention string concatenation"
     )
