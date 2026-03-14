@@ -241,31 +241,102 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 ```
 
-**Step 2: Create `__init__.py` with stub mount function**
+**Step 2: Create `__init__.py` with placeholder mount function**
 
-This follows the mount() signature from `amplifier-bundle-recipes` — `async def mount(coordinator: ModuleCoordinator, config: dict[str, Any] | None = None)`. The stub does nothing yet; Phase 2 fills in the implementation.
+This follows the mount() signature from `amplifier-bundle-recipes` — `async def mount(coordinator: ModuleCoordinator, config: dict[str, Any] | None = None)`. Phase 2 fills in the full implementation, but Phase 1 must still register a tool via `coordinator.mount()` to satisfy protocol compliance validation.
+
+> **⚠️ Protocol Compliance Requirement**: `mount()` MUST call `await coordinator.mount("tools", tool, name=tool.name)`. A mount() that only logs and returns `None` will fail with: `"protocol_compliance: No tool was mounted and mount() did not return a Tool instance"` — this fires on every agent spawn, not just in testing. "Stub" means "placeholder that satisfies the protocol," NOT "empty function."
 
 ```python
-"""Amplifier tool-dot-graph module — DOT/Graphviz validation, rendering, and graph intelligence."""
+"""Amplifier tool-dot-graph module — DOT/Graphviz validation, rendering, and graph intelligence.
+
+Phase 1: Registers a placeholder tool that satisfies module protocol compliance.
+Phase 2: Will replace the placeholder with full validate, render, and analyze tools
+         backed by pydot (syntax validation), graphviz CLI (rendering), and networkx
+         (graph intelligence algorithms).
+"""
 
 import logging
 from typing import Any
 
+from amplifier_core import ToolResult
+
 logger = logging.getLogger(__name__)
 
 
-async def mount(coordinator: Any, config: dict[str, Any] | None = None) -> None:
-    """
-    Mount tool-dot-graph module.
+class DotGraphTool:
+    """Placeholder tool for DOT graph operations (Phase 1).
 
-    Phase 1: Stub only. Phase 2 will register validation and rendering tools.
-    Phase 3 will add graph intelligence (analyze) tools.
+    Phase 2 will replace this with separate validate, render, and analyze tools.
+    This placeholder registers with coordinator.mount() to satisfy protocol_compliance.
+    """
+
+    @property
+    def name(self) -> str:
+        return "dot_graph"
+
+    @property
+    def description(self) -> str:
+        return (
+            "DOT graph tool — validate, render, and analyze DOT-format graphs. "
+            "Phase 2 implementation provides: validation via pydot, rendering via graphviz CLI, "
+            "and analysis via networkx. This placeholder registers the tool to satisfy protocol "
+            "compliance while Phase 2 is under active development."
+        )
+
+    @property
+    def input_schema(self) -> dict:
+        return {
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["validate", "render", "analyze"],
+                    "description": "Operation to perform on the DOT graph",
+                },
+                "dot_content": {
+                    "type": "string",
+                    "description": "DOT graph content as a string",
+                },
+            },
+            "required": ["operation"],
+        }
+
+    async def execute(self, input_data: dict[str, Any]) -> ToolResult:
+        """Return not-yet-implemented message pointing to shell scripts."""
+        operation = input_data.get("operation", "unknown")
+        return ToolResult(
+            success=False,
+            output=(
+                f"dot_graph tool operation '{operation}' is not yet implemented. "
+                "Phase 2 will provide full validate, render, and analyze capabilities. "
+                "Use the dot-validate.sh and dot-render.sh shell scripts in the bundle "
+                "for validation and rendering in the meantime."
+            ),
+        )
+
+
+async def mount(coordinator: Any, config: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Mount the dot_graph tool into the coordinator.
+
+    Registers a placeholder tool that satisfies protocol_compliance during Phase 1.
+    Phase 2 will replace this with fully-implemented validate, render, and analyze tools.
 
     Args:
-        coordinator: Amplifier module coordinator
-        config: Optional tool configuration
+        coordinator: The Amplifier coordinator instance
+        config: Optional module configuration
+
+    Returns:
+        Module metadata dict
     """
-    logger.info("tool-dot-graph mounted (stub — tools not yet registered)")
+    tool = DotGraphTool()
+    await coordinator.mount("tools", tool, name=tool.name)
+    logger.info("tool-dot-graph mounted: registered placeholder 'dot_graph' tool (Phase 2 pending)")
+    return {
+        "name": "tool-dot-graph",
+        "version": "0.1.0",
+        "provides": ["dot_graph"],
+    }
 ```
 
 **Step 3: Verify the module imports**
