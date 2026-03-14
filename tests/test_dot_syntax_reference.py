@@ -236,7 +236,7 @@ def test_has_common_graph_attributes():
         "splines",
         "compound",
         "newrank",
-        "concentrate",
+        "concentrate",  # not in doc; tolerance threshold (>=12) accounts for this
         "overlap",
         "dpi",
     ]
