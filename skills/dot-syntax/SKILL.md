@@ -119,6 +119,7 @@ Supported elements: `TABLE`, `TR`, `TD`, `FONT`, `BR`, `HR`, `IMG`, `<B>`, `<I>`
 | `fdp` | Larger undirected graphs, force-directed |
 | `sfdp` | Very large undirected graphs |
 | `circo` | Circular layouts, ring topologies |
+| `twopi` | Radial/hub-and-spoke layouts |
 
 Use `dot` for most diagrams. Switch to `neato`/`fdp` when hierarchy doesn't matter.
 

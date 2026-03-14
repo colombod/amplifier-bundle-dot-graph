@@ -288,6 +288,14 @@ def test_layout_engines_has_five_engines(skill_content):
     assert found >= 5, f"Expected at least 5 layout engines, found {found}"
 
 
+def test_layout_engines_has_twopi(skill_content):
+    """Must include twopi engine — matches dot-instructions.md which documents all 6 engines."""
+    assert "twopi" in skill_content, (
+        "Layout engines table must include 'twopi' for radial/hub-and-spoke layouts "
+        "(present in dot-instructions.md but missing from skill)"
+    )
+
+
 # --- Common Gotchas section ---
 
 
