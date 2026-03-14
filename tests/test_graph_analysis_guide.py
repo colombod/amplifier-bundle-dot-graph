@@ -82,7 +82,8 @@ def test_has_analysis_operations_section(doc_content):
 
 def test_has_reachability_operation(doc_content):
     """Must include Reachability operation for impact analysis."""
-    assert "Reachability" in doc_content or "reachability" in doc_content, (
+    content_lower = doc_content.lower()
+    assert "reachability" in content_lower, (
         "Must include Reachability analysis operation"
     )
 
@@ -128,9 +129,7 @@ def test_has_subgraph_extraction_operation(doc_content):
 def test_has_structural_diff_operation(doc_content):
     """Must include Structural Diff operation for change tracking."""
     content_lower = doc_content.lower()
-    assert "diff" in content_lower or "structural diff" in content_lower, (
-        "Must include Structural Diff analysis operation"
-    )
+    assert "diff" in content_lower, "Must include Structural Diff analysis operation"
 
 
 def test_has_graph_statistics_operation(doc_content):
