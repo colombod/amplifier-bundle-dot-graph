@@ -7,6 +7,13 @@ tools:
   - module: tool-dot-graph
     source: git+https://github.com/microsoft/amplifier-bundle-dot-graph@main#subdirectory=modules/tool-dot-graph
 
+  # Register dot-graph bundle skills for discovery
+  - module: tool-skills
+    source: git+https://github.com/microsoft/amplifier-module-tool-skills@main
+    config:
+      skills:
+        - "git+https://github.com/microsoft/amplifier-bundle-dot-graph@main#subdirectory=skills"
+
 agents:
   include:
     - dot-graph:dot-author
