@@ -47,7 +47,9 @@ def test_graphviz_not_installed_returns_hint():
     with patch("shutil.which", return_value=None):
         result = _check_graphviz()
 
-    assert result["installed"] is False, "installed must be False when graphviz not on PATH"
+    assert result["installed"] is False, (
+        "installed must be False when graphviz not on PATH"
+    )
     assert "install_hint" in result, "Must include install_hint when not installed"
     assert isinstance(result["install_hint"], str) and result["install_hint"], (
         "install_hint must be a non-empty string"
@@ -65,8 +67,12 @@ def test_pydot_detected():
     assert isinstance(result, dict), "_check_pydot() must return a dict"
     assert "installed" in result, "pydot status must have 'installed' key"
     assert "version" in result, "pydot status must have 'version' key"
-    assert result["installed"] is True, "pydot must be detected as installed (it's a dependency)"
-    assert result["version"] is not None, "pydot version must be populated when installed"
+    assert result["installed"] is True, (
+        "pydot must be detected as installed (it's a dependency)"
+    )
+    assert result["version"] is not None, (
+        "pydot version must be populated when installed"
+    )
 
 
 def test_networkx_detected():
@@ -78,8 +84,12 @@ def test_networkx_detected():
     assert isinstance(result, dict), "_check_networkx() must return a dict"
     assert "installed" in result, "networkx status must have 'installed' key"
     assert "version" in result, "networkx status must have 'version' key"
-    assert result["installed"] is True, "networkx must be detected as installed (it's a dependency)"
-    assert result["version"] is not None, "networkx version must be populated when installed"
+    assert result["installed"] is True, (
+        "networkx must be detected as installed (it's a dependency)"
+    )
+    assert result["version"] is not None, (
+        "networkx version must be populated when installed"
+    )
 
 
 def test_install_hint_is_nonempty_string():
@@ -93,5 +103,13 @@ def test_install_hint_is_nonempty_string():
     # Should contain something useful (a command or URL)
     assert any(
         keyword in result.lower()
-        for keyword in ["brew", "apt", "dnf", "winget", "choco", "graphviz.org", "install"]
+        for keyword in [
+            "brew",
+            "apt",
+            "dnf",
+            "winget",
+            "choco",
+            "graphviz.org",
+            "install",
+        ]
     ), f"install hint should contain useful guidance, got: {result!r}"
