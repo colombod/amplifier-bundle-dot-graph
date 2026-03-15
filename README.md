@@ -13,7 +13,17 @@ This bundle provides DOT/Graphviz capabilities to any Amplifier session through 
 
 ## Usage
 
-Include the behavior in your bundle:
+**Quick install (recommended):**
+
+```bash
+amplifier bundle add git+https://github.com/microsoft/amplifier-bundle-dot-graph@main#subdirectory=behaviors/dot-graph.yaml --app
+```
+
+The `--app` flag makes DOT/Graphviz capabilities available across all your sessions automatically.
+
+**Bundle composition:**
+
+For bundle authors who want to include dot-graph in their own bundle:
 
 ```yaml
 includes:
