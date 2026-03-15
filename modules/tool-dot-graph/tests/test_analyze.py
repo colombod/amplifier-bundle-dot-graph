@@ -427,3 +427,169 @@ def test_cycles_dag_annotated_dot_is_none():
     assert result["annotated_dot"] is None, (
         f"DAG has no cycles so annotated_dot must be None, got: {result['annotated_dot']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Paths operation tests
+# ---------------------------------------------------------------------------
+
+
+def test_paths_simple():
+    """Paths from 'a' to 'd' in linear DAG a->b->c->d returns single path [a,b,c,d]."""
+    result = analyze_dot(
+        SIMPLE_DAG, {"analysis": "paths", "source_node": "a", "target_node": "d"}
+    )
+
+    assert result["success"] is True, f"Paths must succeed, got: {result}"
+    assert result["path_count"] == 1, (
+        f"Linear DAG must have exactly 1 path, got: {result['path_count']}"
+    )
+    assert result["paths"] == [["a", "b", "c", "d"]], (
+        f"Single path must be [a,b,c,d], got: {result['paths']}"
+    )
+    assert result["truncated"] is False, "Single-path result must not be truncated"
+
+
+def test_paths_diamond():
+    """Paths from 'a' to 'd' in diamond DAG returns 2 paths."""
+    result = analyze_dot(
+        DIAMOND_DAG, {"analysis": "paths", "source_node": "a", "target_node": "d"}
+    )
+
+    assert result["success"] is True, f"Paths must succeed, got: {result}"
+    assert result["path_count"] == 2, (
+        f"Diamond DAG must have 2 paths, got: {result['path_count']}"
+    )
+    assert len(result["paths"]) == 2, (
+        f"paths list must have 2 entries, got: {len(result['paths'])}"
+    )
+    for path in result["paths"]:
+        assert path[0] == "a", f"Each path must start at 'a', got: {path}"
+        assert path[-1] == "d", f"Each path must end at 'd', got: {path}"
+    assert result["truncated"] is False
+
+
+def test_paths_no_path_exists():
+    """Disconnected graph: paths from 'a' to 'd' (different component) returns empty, path_count=0."""
+    result = analyze_dot(
+        DISCONNECTED, {"analysis": "paths", "source_node": "a", "target_node": "d"}
+    )
+
+    assert result["success"] is True, (
+        f"Paths must succeed even when no path exists, got: {result}"
+    )
+    assert result["path_count"] == 0, (
+        f"No path between components, got: {result['path_count']}"
+    )
+    assert result["paths"] == [], (
+        f"No-path result must be empty list, got: {result['paths']}"
+    )
+
+
+def test_paths_missing_source():
+    """Missing 'source_node' option returns error mentioning 'source_node'."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "paths", "target_node": "d"})
+
+    assert result["success"] is False, "Missing source_node must return success=False"
+    assert "source_node" in result["error"], (
+        f"Error must mention 'source_node', got: {result['error']}"
+    )
+
+
+def test_paths_missing_target():
+    """Missing 'target_node' option returns error mentioning 'target_node'."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "paths", "source_node": "a"})
+
+    assert result["success"] is False, "Missing target_node must return success=False"
+    assert "target_node" in result["error"], (
+        f"Error must mention 'target_node', got: {result['error']}"
+    )
+
+
+def test_paths_nonexistent_source():
+    """Non-existent source node returns error mentioning the node name."""
+    result = analyze_dot(
+        SIMPLE_DAG, {"analysis": "paths", "source_node": "z", "target_node": "d"}
+    )
+
+    assert result["success"] is False, (
+        "Non-existent source node must return success=False"
+    )
+    assert "z" in result["error"], (
+        f"Error must mention the node name 'z', got: {result['error']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Critical path operation tests
+# ---------------------------------------------------------------------------
+
+
+def test_critical_path_linear_dag():
+    """Critical path in linear DAG a->b->c->d returns [a,b,c,d] with length 4."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "critical_path"})
+
+    assert result["success"] is True, f"Critical path must succeed, got: {result}"
+    assert result["critical_path"] == ["a", "b", "c", "d"], (
+        f"Critical path must be [a,b,c,d], got: {result['critical_path']}"
+    )
+    assert result["length"] == 4, f"Length must be 4, got: {result['length']}"
+
+
+def test_critical_path_diamond_dag():
+    """Critical path in diamond DAG has length 3, starts with 'a', ends with 'd'."""
+    result = analyze_dot(DIAMOND_DAG, {"analysis": "critical_path"})
+
+    assert result["success"] is True, f"Critical path must succeed, got: {result}"
+    assert result["length"] == 3, (
+        f"Diamond critical path length must be 3, got: {result['length']}"
+    )
+    assert result["critical_path"][0] == "a", (
+        f"Critical path must start with 'a', got: {result['critical_path']}"
+    )
+    assert result["critical_path"][-1] == "d", (
+        f"Critical path must end with 'd', got: {result['critical_path']}"
+    )
+
+
+def test_critical_path_complex_dag():
+    """Critical path in complex DAG (a->b->d->e and similar) has length >= 4."""
+    result = analyze_dot(COMPLEX_DAG, {"analysis": "critical_path"})
+
+    assert result["success"] is True, f"Critical path must succeed, got: {result}"
+    assert result["length"] >= 4, (
+        f"Complex DAG critical path length must be >= 4, got: {result['length']}"
+    )
+    assert isinstance(result["critical_path"], list), "critical_path must be a list"
+    assert len(result["critical_path"]) == result["length"], (
+        f"len(critical_path) must equal length: "
+        f"{len(result['critical_path'])} != {result['length']}"
+    )
+
+
+def test_critical_path_on_cyclic_graph():
+    """Critical path on a cyclic graph returns success=False with error mentioning cycle or dag."""
+    result = analyze_dot(CYCLIC_GRAPH, {"analysis": "critical_path"})
+
+    assert result["success"] is False, (
+        "Critical path on cyclic graph must return success=False"
+    )
+    error_lower = result["error"].lower()
+    assert "cycle" in error_lower or "dag" in error_lower, (
+        f"Error must mention 'cycle' or 'dag', got: {result['error']}"
+    )
+
+
+def test_critical_path_single_node():
+    """Critical path on a single-node graph returns [a] with length 1."""
+    result = analyze_dot(SINGLE_NODE, {"analysis": "critical_path"})
+
+    assert result["success"] is True, (
+        f"Critical path on single node must succeed, got: {result}"
+    )
+    assert result["critical_path"] == ["a"], (
+        f"Single node critical path must be ['a'], got: {result['critical_path']}"
+    )
+    assert result["length"] == 1, (
+        f"Single node length must be 1, got: {result['length']}"
+    )

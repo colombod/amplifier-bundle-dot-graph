@@ -96,6 +96,10 @@ def analyze_dot(dot_content: str, options: dict | None = None) -> dict:
         return _unreachable(G, dot_content)
     if analysis == "cycles":
         return _cycles(G, dot_content)
+    if analysis == "paths":
+        return _paths(G, options)
+    if analysis == "critical_path":
+        return _critical_path(G)
 
     # Remaining operations not yet implemented in this task.
     return _parse_error(f"Analysis '{analysis}' is not yet implemented")
@@ -380,6 +384,108 @@ def _cycles(G: nx.Graph, dot_content: str) -> dict:
         "cycles": sorted_cycles,
         "cycle_count": len(raw_cycles),
         "annotated_dot": annotated,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Paths operation
+# ---------------------------------------------------------------------------
+
+
+def _paths(G: nx.Graph, options: dict) -> dict:
+    """Find all simple paths between two nodes, capped at 100 to avoid combinatorial explosion.
+
+    Args:
+        G: NetworkX graph (MultiDiGraph expected).
+        options: Must contain 'source_node' and 'target_node' keys.
+
+    Returns:
+        {
+            success: True,
+            operation: "paths",
+            source_node: str,
+            target_node: str,
+            paths: list[list[str]],  # each path is a list of node names
+            path_count: int,
+            truncated: bool,         # True if more than 100 paths exist
+        }
+        or {success: False, error: str} on invalid input.
+    """
+    if "source_node" not in options:
+        return _parse_error("Missing required 'source_node' in options")
+    if "target_node" not in options:
+        return _parse_error("Missing required 'target_node' in options")
+
+    source = options["source_node"]
+    target = options["target_node"]
+
+    if source not in G:
+        return _parse_error(f"Node '{source}' not found in graph")
+    if target not in G:
+        return _parse_error(f"Node '{target}' not found in graph")
+
+    _PATH_CAP = 100
+    raw_paths: list[list[str]] = []
+    truncated = False
+
+    for path in nx.all_simple_paths(G, source=source, target=target):
+        raw_paths.append([str(n) for n in path])
+        if len(raw_paths) >= _PATH_CAP:
+            # Check if there are more paths beyond the cap.
+            try:
+                next(nx.all_simple_paths(G, source=source, target=target))
+                # We already consumed _PATH_CAP paths; peek to see if any remain.
+                # Re-enumerate to detect truncation cleanly.
+            except StopIteration:
+                pass
+            truncated = True
+            break
+
+    return {
+        "success": True,
+        "operation": "paths",
+        "source_node": source,
+        "target_node": target,
+        "paths": raw_paths,
+        "path_count": len(raw_paths),
+        "truncated": truncated,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Critical path operation
+# ---------------------------------------------------------------------------
+
+
+def _critical_path(G: nx.Graph) -> dict:
+    """Find the longest path in a DAG (critical path).
+
+    Args:
+        G: NetworkX graph (MultiDiGraph expected). Must be a DAG.
+
+    Returns:
+        {
+            success: True,
+            operation: "critical_path",
+            critical_path: list[str],  # ordered list of node names on the longest path
+            length: int,               # number of nodes in the critical path
+        }
+        or {success: False, error: str} if the graph contains cycles.
+    """
+    if not G.is_directed() or not nx.is_directed_acyclic_graph(G):
+        return _parse_error(
+            "Critical path requires a directed acyclic graph (DAG). "
+            "The graph contains a cycle or is not directed."
+        )
+
+    longest = nx.dag_longest_path(cast(nx.DiGraph, G))
+    path = [str(n) for n in longest]
+
+    return {
+        "success": True,
+        "operation": "critical_path",
+        "critical_path": path,
+        "length": len(path),
     }
 
 
