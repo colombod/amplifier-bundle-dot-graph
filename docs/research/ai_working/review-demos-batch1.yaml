@@ -1,0 +1,34 @@
+recipe:
+  name: review-demos-batch1
+  description: Run diagram-reviewer on demo DOT files 01 and 02
+
+steps:
+  - id: review_01
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review this DOT diagram file using the full 5-level checklist (Syntax, Structure, Quality, Style, Reconciliation). Return a complete structured verdict in the standard format.
+
+      File: 01-bundle-architecture.dot
+      Purpose: Self-documenting architecture diagram of the dot-graph bundle (Tier 1 knowledge layer, Tier 2 validation/rendering, Tier 3 analysis, agents, behavior, bundle manifest)
+      Lines: 202
+
+      ```dot
+      {{ dot_01 }}
+      ```
+    timeout: 180
+
+  - id: review_02
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review this DOT diagram file using the full 5-level checklist (Syntax, Structure, Quality, Style, Reconciliation). Return a complete structured verdict in the standard format.
+
+      File: 02-use-cases.dot
+      Purpose: Hub-and-spoke diagram showing the 7 primary use cases of DOT in the Amplifier ecosystem
+      Lines: 190
+
+      ```dot
+      {{ dot_02 }}
+      ```
+    timeout: 180

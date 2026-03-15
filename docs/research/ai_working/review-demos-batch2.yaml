@@ -1,0 +1,36 @@
+recipe:
+  name: review-demos-batch2
+  description: Run diagram-reviewer on demo DOT files 03a and 03b
+
+steps:
+  - id: review_03a
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review this DOT diagram file using the full 5-level checklist (Syntax, Structure, Quality, Style, Reconciliation). Return a complete structured verdict in the standard format.
+
+      File: 03a-reconciliation-before.dot
+      Purpose: "Before" reconciliation diagram — developer's naive mental model of an order processing system (assumptions labeled, dead code hidden). Part 1 of 2 showing the reconciliation workflow.
+      Lines: 160
+
+      ```dot
+      {{ dot_03a }}
+      ```
+    timeout: 180
+
+  - id: review_03b
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review this DOT diagram file using the full 5-level checklist (Syntax, Structure, Quality, Style, Reconciliation). Return a complete structured verdict in the standard format.
+
+      IMPORTANT CONTEXT: The isolated analytics cluster (analytics_svc, reporting_db) is INTENTIONAL — it models a dead/disconnected subsystem discovered during reconciliation. This is the diagram's key finding, not a structural error. The retry_logic node is similarly intentional dead code. The findings HTML table node is connected via a dotted edge to payment_svc to anchor it semantically.
+
+      File: 03b-reconciliation-after.dot
+      Purpose: "After" reconciliation diagram — reality surfaced with 7 findings: dead code, missing retry, sync queue, write-only cache, undocumented deps, broken notification, disconnected analytics cluster.
+      Lines: 229
+
+      ```dot
+      {{ dot_03b }}
+      ```
+    timeout: 180

@@ -1,0 +1,49 @@
+recipe:
+  name: review-demos-batch3
+  description: Run diagram-reviewer on demo DOT files 04a, 04b, 05, and 06
+
+steps:
+  - id: review_04a
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review this DOT diagram file using the full 5-level checklist. Return a structured PASS/WARN/FAIL verdict.
+
+      File: 04a-multiscale-overview.dot
+      Purpose: Overview-level diagram of a CloudSaaS platform (5 subsystems: Gateway & Auth, Core Platform, Product Domain, Data Layer, Observability). Demonstrates zoom-out level. Companion to 04b which shows the Gateway & Auth detail.
+      Lines: 186
+
+      ```dot
+      {{ dot_04a }}
+      ```
+    timeout: 180
+
+  - id: review_04b
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review this DOT diagram file using the full 5-level checklist. Return a structured PASS/WARN/FAIL verdict.
+
+      File: 04b-multiscale-detail.dot
+      Purpose: Detail-level zoom-in of the Gateway & Auth subsystem from 04a. Shows full internal pipeline: TLS termination, WAF, rate limiter, auth pipeline (JWT/API-key/mTLS), OPA-based authz, request enrichment, downstream routing.
+      Lines: 243
+
+      ```dot
+      {{ dot_04b }}
+      ```
+    timeout: 180
+
+  - id: review_06
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review this DOT diagram file using the full 5-level checklist. Return a structured PASS/WARN/FAIL verdict.
+
+      File: 06-ecosystem-composition.dot
+      Purpose: Shows how the dot-graph bundle composes into the Amplifier ecosystem — the behavior pattern, which bundles include it, the context sink pattern, and the adoption gradient.
+      Lines: 237
+
+      ```dot
+      {{ dot_06 }}
+      ```
+    timeout: 180

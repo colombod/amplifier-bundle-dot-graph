@@ -1,0 +1,36 @@
+recipe:
+  name: review-b1
+  description: Review demos 01 and 02
+
+steps:
+  - id: load_files
+    type: bash
+    command: |
+      echo "=== 01-bundle-architecture.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/01-bundle-architecture.dot
+      echo ""
+      echo "=== 02-use-cases.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/02-use-cases.dot
+    timeout: 10
+
+  - id: review_01
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist (Syntax, Structure, Quality, Style, Reconciliation) and return a structured PASS/WARN/FAIL verdict.
+
+      File: 01-bundle-architecture.dot
+      Purpose: Self-documenting architecture of the dot-graph bundle — shows the 3-tier structure (Tier 1 Knowledge Layer with skills/docs/context, Tier 2 Validation/Rendering with tool module, Tier 3 via dot_analyze), the 2 agents (dot-author, diagram-reviewer), the behavior wiring unit, and the bundle manifest. 202 lines.
+
+      {{ steps.load_files.stdout | split("=== 02-use-cases.dot ===") | first | replace("=== 01-bundle-architecture.dot ===\n", "") }}
+    timeout: 180
+
+  - id: review_02
+    type: agent
+    agent: dot-graph:diagram-reviewer
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist and return a structured PASS/WARN/FAIL verdict.
+
+      File: 02-use-cases.dot
+      Purpose: Hub-and-spoke diagram showing the 7 primary use cases of DOT in the Amplifier ecosystem, with DOT Language as the central hub and 7 use-case nodes radiating outward, plus cross-cutting relationship edges. 190 lines.
+
+      {{ steps.load_files.stdout | split("=== 02-use-cases.dot ===\n") | last }}
+    timeout: 180

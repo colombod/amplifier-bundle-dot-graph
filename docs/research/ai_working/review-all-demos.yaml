@@ -1,0 +1,261 @@
+name: "review-all-demos"
+description: "Run diagram-reviewer on all 8 demo DOT files"
+version: "1.0.0"
+
+steps:
+
+  # ========================================================================
+  # Read all DOT files
+  # ========================================================================
+
+  - id: "read_files"
+    type: "bash"
+    command: |
+      echo "=== FILE: 01-bundle-architecture.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/01-bundle-architecture.dot
+      echo ""
+      echo "=== FILE: 02-use-cases.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/02-use-cases.dot
+      echo ""
+      echo "=== FILE: 03a-reconciliation-before.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/03a-reconciliation-before.dot
+      echo ""
+      echo "=== FILE: 03b-reconciliation-after.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/03b-reconciliation-after.dot
+      echo ""
+      echo "=== FILE: 04a-multiscale-overview.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/04a-multiscale-overview.dot
+      echo ""
+      echo "=== FILE: 04b-multiscale-detail.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/04b-multiscale-detail.dot
+      echo ""
+      echo "=== FILE: 05-recipe-visualization.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/05-recipe-visualization.dot
+      echo ""
+      echo "=== FILE: 06-ecosystem-composition.dot ===" && cat /home/bkrabach/dev/amplifier-bundle-dot-graph/demos/06-ecosystem-composition.dot
+    output: "all_dot_files"
+    timeout: 15
+
+  # ========================================================================
+  # Review 01 — Bundle Architecture
+  # ========================================================================
+
+  - id: "review_01"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist (Syntax, Structure, Quality, Style, Reconciliation). Return a complete structured PASS/WARN/FAIL verdict.
+
+      **File**: 01-bundle-architecture.dot (202 lines)
+      **Purpose**: Self-documenting architecture diagram of the amplifier-bundle-dot-graph bundle. Shows 3-tier structure (Tier 1 Knowledge Layer: skills/docs/context; Tier 2 Validation/Rendering: tool-dot-graph module; Tier 3: dot_analyze), 2 agents (dot-author, diagram-reviewer), the behavior wiring unit, and the bundle manifest.
+
+      ```dot
+      {{all_dot_files}}
+      ```
+
+      NOTE: Only review the section from "=== FILE: 01-bundle-architecture.dot ===" to "=== FILE: 02-use-cases.dot ===". Ignore the rest.
+    output: "verdict_01"
+    timeout: 180
+
+  # ========================================================================
+  # Review 02 — 7 Use Cases
+  # ========================================================================
+
+  - id: "review_02"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist. Return a complete structured PASS/WARN/FAIL verdict.
+
+      **File**: 02-use-cases.dot (190 lines)
+      **Purpose**: Hub-and-spoke diagram with DOT Language as the central circle node and 7 use-case box nodes radiating outward (Dense Representation, Reconciliation Forcing Function, Multi-Scale Navigation, Analysis Substrate, Multi-Modal Bridge, Workflow Visualization, Investigation Artifact). Each use case has a note node with examples. Cross-cutting relationship edges show how use cases connect.
+
+      Extract the DOT content for this file from the section labeled "=== FILE: 02-use-cases.dot ===" in:
+
+      {{all_dot_files}}
+    output: "verdict_02"
+    timeout: 180
+
+  # ========================================================================
+  # Review 03a — Reconciliation Before
+  # ========================================================================
+
+  - id: "review_03a"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist. Return a complete structured PASS/WARN/FAIL verdict.
+
+      **File**: 03a-reconciliation-before.dot (160 lines)
+      **Purpose**: Part 1 of a reconciliation before/after pair. Shows a developer's naive mental model of an order-processing system — beliefs about retry logic, async queues, and cache behavior, all annotated with "(believed: ...)". Dead code (analytics cluster) appears real. This is the "belief state" before verification.
+
+      Extract the DOT content for "=== FILE: 03a-reconciliation-before.dot ===" from:
+
+      {{all_dot_files}}
+    output: "verdict_03a"
+    timeout: 180
+
+  # ========================================================================
+  # Review 03b — Reconciliation After
+  # ========================================================================
+
+  - id: "review_03b"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist. Return a complete structured PASS/WARN/FAIL verdict.
+
+      IMPORTANT CONTEXT: The isolated analytics cluster (analytics_svc + reporting_db) IS INTENTIONALLY DISCONNECTED. It models dead/orphaned code discovered during reconciliation — this is the diagram's primary finding, not a structural error. Similarly, retry_logic is connected via a "should call (never does)" dashed edge to show it's dead code that payment_svc was supposed to call. The findings table node is anchored to payment_svc via a dotted edge.
+
+      **File**: 03b-reconciliation-after.dot (229 lines)
+      **Purpose**: Part 2 of the reconciliation pair. Reality surfaced: 7 findings including no retry logic, sync (not async) queue, write-only cache, undocumented external IdP dependency, SMS notifications silently dropped, dead retry_logic module, disconnected analytics cluster.
+
+      Extract the DOT content for "=== FILE: 03b-reconciliation-after.dot ===" from:
+
+      {{all_dot_files}}
+    output: "verdict_03b"
+    timeout: 180
+
+  # ========================================================================
+  # Review 04a — Multi-Scale Overview
+  # ========================================================================
+
+  - id: "review_04a"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist. Return a complete structured PASS/WARN/FAIL verdict.
+
+      **File**: 04a-multiscale-overview.dot (186 lines)
+      **Purpose**: Overview-level (zoom-out) diagram of a CloudSaaS platform. Shows 5 subsystems as clusters: Gateway & Auth, Core Platform, Product Domain, Data Layer, Observability. Cross-system edges show key flows only — detail is in 04b. Companion piece to 04b which zooms into Gateway & Auth.
+
+      Extract the DOT content for "=== FILE: 04a-multiscale-overview.dot ===" from:
+
+      {{all_dot_files}}
+    output: "verdict_04a"
+    timeout: 180
+
+  # ========================================================================
+  # Review 04b — Multi-Scale Detail
+  # ========================================================================
+
+  - id: "review_04b"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist. Return a complete structured PASS/WARN/FAIL verdict.
+
+      **File**: 04b-multiscale-detail.dot (243 lines)
+      **Purpose**: Detail-level (zoom-in) diagram of the Gateway & Auth subsystem from 04a. Shows full internal pipeline: TLS termination → WAF (diamond decision) → rate limiter → token extraction → token type gate (decision) → JWT/API-key/mTLS validation → OPA authz → route table → request enricher → downstream services. Error paths shown in red.
+
+      Extract the DOT content for "=== FILE: 04b-multiscale-detail.dot ===" from:
+
+      {{all_dot_files}}
+    output: "verdict_04b"
+    timeout: 180
+
+  # ========================================================================
+  # Review 05 — Recipe Visualization
+  # ========================================================================
+
+  - id: "review_05"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist. Return a complete structured PASS/WARN/FAIL verdict.
+
+      **File**: 05-recipe-visualization.dot (245 lines)
+      **Purpose**: Visualizes the Amplifier Foundation bundle validation recipe family — 3 related recipes: validate-bundle.yaml (multi-bundle orchestrator with foreach loop), validate-single-bundle.yaml (per-bundle worker called as sub-recipe), and validate-bundle-repo.yaml (full repo structural validator). Uses hexagon for foreach, diamond for conditional gates, color-coded node fills by step type.
+
+      Extract the DOT content for "=== FILE: 05-recipe-visualization.dot ===" from:
+
+      {{all_dot_files}}
+    output: "verdict_05"
+    timeout: 180
+
+  # ========================================================================
+  # Review 06 — Ecosystem Composition
+  # ========================================================================
+
+  - id: "review_06"
+    agent: "dot-graph:diagram-reviewer"
+    prompt: |
+      Review the following DOT diagram using the full 5-level checklist. Return a complete structured PASS/WARN/FAIL verdict.
+
+      **File**: 06-ecosystem-composition.dot (237 lines)
+      **Purpose**: Shows how the dot-graph bundle composes into the Amplifier ecosystem. Depicts: the bundle's capability clusters (agents, tools, skills, context), which consuming bundles include the behavior (amplifier-foundation, dot-graph-bundle dev env, hypothetical team bundle), the context sink pattern showing how dot-awareness.md propagates to every session, and a 4-step adoption gradient.
+
+      Extract the DOT content for "=== FILE: 06-ecosystem-composition.dot ===" from:
+
+      {{all_dot_files}}
+    output: "verdict_06"
+    timeout: 180
+
+  # ========================================================================
+  # Write all verdicts to a review file
+  # ========================================================================
+
+  - id: "write_reviews"
+    type: "bash"
+    command: |
+      OUTFILE="/home/bkrabach/dev/amplifier-bundle-dot-graph/demos/REVIEWS.md"
+      cat << 'HEADER_EOF' > "$OUTFILE"
+      # Demo DOT Files — Diagram Reviewer Verdicts
+      
+      Reviewed by: `dot-graph:diagram-reviewer` agent (5-level checklist: Syntax, Structure, Quality, Style, Reconciliation)
+      
+      ---
+      HEADER_EOF
+
+      cat << 'V01_EOF' >> "$OUTFILE"
+      ## 01-bundle-architecture.dot
+      
+      {{verdict_01}}
+      
+      ---
+      V01_EOF
+
+      cat << 'V02_EOF' >> "$OUTFILE"
+      ## 02-use-cases.dot
+      
+      {{verdict_02}}
+      
+      ---
+      V02_EOF
+
+      cat << 'V03A_EOF' >> "$OUTFILE"
+      ## 03a-reconciliation-before.dot
+      
+      {{verdict_03a}}
+      
+      ---
+      V03A_EOF
+
+      cat << 'V03B_EOF' >> "$OUTFILE"
+      ## 03b-reconciliation-after.dot
+      
+      {{verdict_03b}}
+      
+      ---
+      V03B_EOF
+
+      cat << 'V04A_EOF' >> "$OUTFILE"
+      ## 04a-multiscale-overview.dot
+      
+      {{verdict_04a}}
+      
+      ---
+      V04A_EOF
+
+      cat << 'V04B_EOF' >> "$OUTFILE"
+      ## 04b-multiscale-detail.dot
+      
+      {{verdict_04b}}
+      
+      ---
+      V04B_EOF
+
+      cat << 'V05_EOF' >> "$OUTFILE"
+      ## 05-recipe-visualization.dot
+      
+      {{verdict_05}}
+      
+      ---
+      V05_EOF
+
+      cat << 'V06_EOF' >> "$OUTFILE"
+      ## 06-ecosystem-composition.dot
+      
+      {{verdict_06}}
+      V06_EOF
+
+      echo "Reviews written to: $OUTFILE"
+      wc -l "$OUTFILE"
+    output: "write_result"
+    timeout: 30
