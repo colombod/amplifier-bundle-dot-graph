@@ -26,9 +26,6 @@ class DotGraphTool:
     - Validation: three-layer syntax, structural, and render-quality checks via pydot
     - Rendering: graphviz CLI wrapper for SVG/PNG/PDF output
     - Analysis: reachability, cycle detection, critical path, and structural diff via networkx
-
-    This placeholder registers the tool to satisfy protocol compliance while Phase 2
-    is under active development. Calling it now will return a not-yet-implemented message.
     """
 
     @property
@@ -43,9 +40,6 @@ Phase 2 implementation provides:
 - Validation: three-layer syntax, structural, and render-quality checks via pydot
 - Rendering: graphviz CLI wrapper for SVG/PNG/PDF output
 - Analysis: reachability, cycle detection, critical path, and structural diff via networkx
-
-This placeholder registers the tool to satisfy protocol compliance while Phase 2
-is under active development. Calling it now will return a not-yet-implemented message.
 
 Operations:
 - validate: Parse and validate DOT content through up to three layers (syntax, structural, render)

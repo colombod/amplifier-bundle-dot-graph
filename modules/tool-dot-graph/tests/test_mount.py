@@ -6,7 +6,7 @@ mounted before Phase 2 provides the full implementation.
 """
 
 import inspect
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -92,7 +92,9 @@ async def test_mount_registers_tool_with_name_kwarg():
     await mount(coordinator)
 
     args, kwargs = coordinator.mount.call_args
-    assert "name" in kwargs, "coordinator.mount() must receive a 'name' keyword argument"
+    assert "name" in kwargs, (
+        "coordinator.mount() must receive a 'name' keyword argument"
+    )
     assert isinstance(kwargs["name"], str) and kwargs["name"], (
         "Tool name must be a non-empty string"
     )
@@ -111,7 +113,9 @@ async def test_mounted_tool_has_name_property():
     args, _ = coordinator.mount.call_args
     tool = args[1]  # second positional arg is the tool instance
     assert hasattr(tool, "name"), "Tool must have a 'name' property"
-    assert isinstance(tool.name, str) and tool.name, "Tool name must be a non-empty string"
+    assert isinstance(tool.name, str) and tool.name, (
+        "Tool name must be a non-empty string"
+    )
 
 
 @pytest.mark.asyncio
@@ -146,7 +150,9 @@ async def test_mounted_tool_has_input_schema_property():
     tool = args[1]
     assert hasattr(tool, "input_schema"), "Tool must have an 'input_schema' property"
     assert isinstance(tool.input_schema, dict), "input_schema must be a dict"
-    assert tool.input_schema.get("type") == "object", "input_schema must have type: object"
+    assert tool.input_schema.get("type") == "object", (
+        "input_schema must have type: object"
+    )
 
 
 @pytest.mark.asyncio
