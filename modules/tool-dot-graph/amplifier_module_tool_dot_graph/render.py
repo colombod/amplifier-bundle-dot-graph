@@ -18,6 +18,9 @@ SUPPORTED_FORMATS = ("svg", "png", "pdf", "json", "ps", "eps")
 # Supported layout engines.
 SUPPORTED_ENGINES = ("dot", "neato", "fdp", "sfdp", "twopi", "circo")
 
+# Subprocess timeout for graphviz rendering (seconds).
+_RENDER_TIMEOUT_SECS = 30
+
 
 def render_dot(
     dot_content: str,
@@ -103,7 +106,7 @@ def render_dot(
             [engine, f"-T{output_format}", tmp_dot_path, "-o", output_path],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=_RENDER_TIMEOUT_SECS,
         )
 
         if result.returncode != 0:
@@ -131,7 +134,7 @@ def render_dot(
     except subprocess.TimeoutExpired:
         return {
             "success": False,
-            "error": "Render timed out (>30s)",
+            "error": f"Render timed out (>{_RENDER_TIMEOUT_SECS}s)",
         }
     except OSError as exc:
         return {

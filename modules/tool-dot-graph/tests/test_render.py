@@ -72,6 +72,9 @@ def test_render_custom_output_path():
     """render_dot() with explicit output_path writes to that path."""
     with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as f:
         custom_path = f.name
+    # Remove the empty file so graphviz can write to this path cleanly;
+    # some versions refuse to overwrite an existing (even empty) output file.
+    os.unlink(custom_path)
 
     try:
         result = render_dot(_SIMPLE_DOT, output_path=custom_path)
