@@ -42,7 +42,7 @@ class DotGraphTool:
 Phase 2 implementation provides:
 - Validation: three-layer syntax, structural, and render-quality checks via pydot
 - Rendering: graphviz CLI wrapper for SVG/PNG/PDF output
-- Analysis: reachability, cycle detection, critical path, and structural diff via networkx
+- Setup: environment check for graphviz, pydot, and networkx availability
 
 Operations:
 - validate: Parse and validate DOT content through up to three layers (syntax, structural, render)
