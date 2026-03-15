@@ -80,11 +80,18 @@ def render_dot(
         }
 
     # --- Determine output path ---
+    # Track whether we generated the output path so we can clean it up on failure.
+    auto_output_path = output_path is None
     if output_path is None:
+        # NOTE: tempfile.mktemp() is deprecated due to TOCTOU race conditions.
+        # It is intentional here: graphviz requires the output path to not exist
+        # before writing, so NamedTemporaryFile(delete=False) + close would leave
+        # an empty file that some graphviz versions refuse to overwrite.
         output_path = tempfile.mktemp(suffix=f".{output_format}")
 
     # --- Render ---
     tmp_dot_path: str | None = None
+    succeeded = False
     try:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".dot", delete=False
@@ -112,6 +119,7 @@ def render_dot(
                 "error": "Render produced empty output",
             }
 
+        succeeded = True
         return {
             "success": True,
             "output_path": output_path,
@@ -133,3 +141,6 @@ def render_dot(
     finally:
         if tmp_dot_path and os.path.exists(tmp_dot_path):
             os.unlink(tmp_dot_path)
+        # Remove partial output when we generated the path and rendering failed.
+        if auto_output_path and not succeeded and os.path.exists(output_path):
+            os.unlink(output_path)
