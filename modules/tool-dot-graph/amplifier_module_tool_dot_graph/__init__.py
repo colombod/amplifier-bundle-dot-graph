@@ -118,7 +118,17 @@ Operations:
 
         if operation == "validate":
             layers = options.get("layers")
-            result = validate.validate_dot(dot_content, layers=layers)
+            try:
+                result = validate.validate_dot(dot_content, layers=layers)
+            except ValueError as exc:
+                error_result = {
+                    "valid": False,
+                    "issues": [
+                        {"layer": "syntax", "severity": "error", "message": str(exc)}
+                    ],
+                    "stats": {"nodes": 0, "edges": 0, "clusters": 0, "lines": 0},
+                }
+                return ToolResult(success=False, output=json.dumps(error_result))
             return ToolResult(success=result["valid"], output=json.dumps(result))
 
         if operation == "render":

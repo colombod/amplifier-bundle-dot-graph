@@ -1,9 +1,11 @@
 """Integration tests for the real DotGraphTool (Phase 2).
 
-11 tests covering:
+12 tests covering:
 - Operation routing: validate, render, setup, analyze, unknown (6 tests including render)
 - Input schema: setup operation in enum, options sub-properties (2 tests)
 - Mount contract: real tool version, tool can actually validate (2 tests)
+- Error handling: invalid layer name returns structured error, not exception (1 test)
+- Layer selection: syntax-only, structural-only layers (1 test)
 
 These tests verify that __init__.py routes operations to the real
 validate, render, and setup_helper modules (Phase 2 implementation).
@@ -58,6 +60,43 @@ async def test_validate_invalid_dot_returns_failure():
     data = _parse_output(result)
     assert "valid" in data, "Output must contain 'valid' key"
     assert data["valid"] is False, "Invalid DOT must have valid=False"
+
+
+@pytest.mark.asyncio
+async def test_validate_invalid_layer_returns_structured_error():
+    """Invalid layer name in options returns success=False with structured error, not raised ValueError.
+
+    Regression test for: execute() must catch ValueError from validate_dot() and return
+    a ToolResult(success=False, ...) instead of propagating the exception to the caller.
+    """
+    from amplifier_module_tool_dot_graph import DotGraphTool
+
+    tool = DotGraphTool()
+    result = await tool.execute(
+        {
+            "operation": "validate",
+            "dot_content": "digraph G {}",
+            "options": {"layers": ["bogus"]},
+        }
+    )
+
+    assert result.success is False, (
+        "Invalid layer name must return success=False (not raise ValueError)"
+    )
+    data = _parse_output(result)
+    assert "valid" in data, "Structured error must include 'valid' key"
+    assert data["valid"] is False, "Invalid layer must produce valid=False"
+    assert "issues" in data, "Structured error must include 'issues' key"
+    assert len(data["issues"]) > 0, (
+        "Issues list must be non-empty for invalid layer name"
+    )
+    error_issue = data["issues"][0]
+    assert "message" in error_issue, "Each issue must have a 'message' field"
+    assert (
+        "bogus" in error_issue["message"] or "layer" in error_issue["message"].lower()
+    ), (
+        f"Error message must mention the invalid layer or 'layer', got: {error_issue['message']!r}"
+    )
 
 
 @pytest.mark.asyncio
