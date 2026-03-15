@@ -90,6 +90,12 @@ def analyze_dot(dot_content: str, options: dict | None = None) -> dict:
     # Dispatch to operation handler.
     if analysis == "stats":
         return _stats(G)
+    if analysis == "reachability":
+        return _reachability(G, options)
+    if analysis == "unreachable":
+        return _unreachable(G, dot_content)
+    if analysis == "cycles":
+        return _cycles(G, dot_content)
 
     # Remaining operations not yet implemented in this task.
     return _parse_error(f"Analysis '{analysis}' is not yet implemented")
@@ -230,6 +236,226 @@ def _stats(G: nx.Graph) -> dict:
         "self_loops": self_loops,
         "nodes": nodes,
     }
+
+
+# ---------------------------------------------------------------------------
+# Reachability operation
+# ---------------------------------------------------------------------------
+
+
+def _reachability(G: nx.Graph, options: dict) -> dict:
+    """Find all nodes reachable from a source node via directed edges.
+
+    Args:
+        G: NetworkX graph (MultiDiGraph expected).
+        options: Must contain 'source_node' key with the name of the start node.
+
+    Returns:
+        {
+            success: True,
+            operation: "reachability",
+            source_node: str,
+            reachable: list[str],   # sorted, excludes source itself
+            reachable_count: int,
+        }
+        or {success: False, error: str} on invalid input.
+    """
+    if "source_node" not in options:
+        return _parse_error("Missing required 'source_node' in options")
+
+    source = options["source_node"]
+
+    if source not in G:
+        return _parse_error(f"Node '{source}' not found in graph")
+
+    reachable = nx.descendants(G, source)
+    reachable_list = sorted(str(n) for n in reachable)
+
+    return {
+        "success": True,
+        "operation": "reachability",
+        "source_node": source,
+        "reachable": reachable_list,
+        "reachable_count": len(reachable_list),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Unreachable operation
+# ---------------------------------------------------------------------------
+
+
+def _unreachable(G: nx.Graph, dot_content: str) -> dict:
+    """Identify nodes with no incoming edges, excluding well-known entry points.
+
+    Nodes whose lower-cased name appears in _ENTRY_HINTS (start, entry, root,
+    begin, init, source) are excluded from the result even if they have
+    in-degree 0.
+
+    Args:
+        G: NetworkX graph (MultiDiGraph expected).
+        dot_content: Original DOT source, used to produce annotated output.
+
+    Returns:
+        {
+            success: True,
+            operation: "unreachable",
+            unreachable: list[str],    # sorted
+            unreachable_count: int,
+            annotated_dot: str,        # nodes colored red in DOT source
+        }
+    """
+    DG = cast(nx.DiGraph, G)
+    unreachable_nodes = sorted(
+        str(n)
+        for n in DG.nodes()
+        if DG.in_degree(n) == 0 and str(n).strip('"').lower() not in _ENTRY_HINTS
+    )
+
+    annotated = _annotate_nodes(dot_content, unreachable_nodes, "red", "filled")
+
+    return {
+        "success": True,
+        "operation": "unreachable",
+        "unreachable": unreachable_nodes,
+        "unreachable_count": len(unreachable_nodes),
+        "annotated_dot": annotated,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cycles operation
+# ---------------------------------------------------------------------------
+
+
+def _cycles(G: nx.Graph, dot_content: str) -> dict:
+    """Detect all simple cycles in a directed graph.
+
+    Args:
+        G: NetworkX graph (MultiDiGraph expected).
+        dot_content: Original DOT source, used to produce annotated output.
+
+    Returns:
+        {
+            success: True,
+            operation: "cycles",
+            has_cycles: bool,
+            cycles: list[list[str]],  # each cycle is a sorted list of node names
+            cycle_count: int,
+            annotated_dot: str | None,  # cycle edges colored red; None if no cycles
+        }
+    """
+    if not G.is_directed():
+        return _parse_error("Cycle detection requires a directed graph")
+
+    raw_cycles = list(nx.simple_cycles(G))
+
+    if not raw_cycles:
+        return {
+            "success": True,
+            "operation": "cycles",
+            "has_cycles": False,
+            "cycles": [],
+            "cycle_count": 0,
+            "annotated_dot": None,
+        }
+
+    # Sort each cycle's node list for deterministic output.
+    sorted_cycles = [sorted(str(n) for n in cycle) for cycle in raw_cycles]
+
+    # Collect every edge that participates in at least one cycle.
+    cycle_edges: set[tuple[str, str]] = set()
+    for cycle in raw_cycles:
+        for i in range(len(cycle)):
+            src = str(cycle[i])
+            dst = str(cycle[(i + 1) % len(cycle)])
+            cycle_edges.add((src, dst))
+
+    annotated = _annotate_edges(dot_content, list(cycle_edges), "red", "bold")
+
+    return {
+        "success": True,
+        "operation": "cycles",
+        "has_cycles": True,
+        "cycles": sorted_cycles,
+        "cycle_count": len(raw_cycles),
+        "annotated_dot": annotated,
+    }
+
+
+# ---------------------------------------------------------------------------
+# DOT annotation helpers
+# ---------------------------------------------------------------------------
+
+
+def _annotate_nodes(dot_content: str, nodes: list[str], color: str, style: str) -> str:
+    """Insert per-node attribute declarations into a DOT string.
+
+    Declarations are inserted on new lines immediately after the first line
+    that contains '{', so they take precedence over any global defaults.
+
+    Args:
+        dot_content: Raw DOT graph string.
+        nodes: Node names to annotate (must already exist in the graph).
+        color: DOT color value (e.g. "red").
+        style: DOT style value (e.g. "filled").
+
+    Returns:
+        Modified DOT string with attribute lines injected, or the original
+        string unchanged if no nodes are provided or no '{' is found.
+    """
+    if not nodes:
+        return dot_content
+
+    lines = dot_content.split("\n")
+    insert_idx: int | None = None
+    for i, line in enumerate(lines):
+        if "{" in line:
+            insert_idx = i + 1
+            break
+
+    if insert_idx is None:
+        return dot_content
+
+    new_lines = [f'  {node} [color="{color}", style="{style}"];' for node in nodes]
+    return "\n".join(lines[:insert_idx] + new_lines + lines[insert_idx:])
+
+
+def _annotate_edges(
+    dot_content: str, edges: list[tuple[str, str]], color: str, style: str
+) -> str:
+    """Insert per-edge attribute declarations into a DOT string.
+
+    Declarations are inserted on new lines immediately after the first line
+    that contains '{'.
+
+    Args:
+        dot_content: Raw DOT graph string.
+        edges: (src, dst) pairs to annotate.
+        color: DOT color value (e.g. "red").
+        style: DOT style value (e.g. "bold").
+
+    Returns:
+        Modified DOT string with attribute lines injected, or the original
+        string unchanged if no edges are provided or no '{' is found.
+    """
+    if not edges:
+        return dot_content
+
+    lines = dot_content.split("\n")
+    insert_idx: int | None = None
+    for i, line in enumerate(lines):
+        if "{" in line:
+            insert_idx = i + 1
+            break
+
+    if insert_idx is None:
+        return dot_content
+
+    new_lines = [
+        f'  {src} -> {dst} [color="{color}", style="{style}"];' for src, dst in edges
+    ]
+    return "\n".join(lines[:insert_idx] + new_lines + lines[insert_idx:])
 
 
 # ---------------------------------------------------------------------------

@@ -212,3 +212,218 @@ def test_stats_undirected_graph():
     assert result["is_directed"] is False, (
         f"UNDIRECTED must have is_directed=False, got: {result['is_directed']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# DOT fixtures for reachability / unreachable / cycles tests
+# ---------------------------------------------------------------------------
+
+# Graph with an entry hint node ('start') and an orphan ('orphan')
+ENTRY_HINT_GRAPH = "digraph G { start -> a; orphan -> b }"
+
+
+# ---------------------------------------------------------------------------
+# Reachability operation tests
+# ---------------------------------------------------------------------------
+
+
+def test_reachability_from_source():
+    """Reachability from 'a' in a linear chain a→b→c→d returns [b, c, d]."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "reachability", "source_node": "a"})
+
+    assert result["success"] is True, f"Reachability must succeed, got: {result}"
+    assert result["reachable"] == ["b", "c", "d"], (
+        f"From 'a' in SIMPLE_DAG must reach [b,c,d], got: {result['reachable']}"
+    )
+
+
+def test_reachability_from_leaf():
+    """Reachability from the leaf node 'd' in a linear chain returns []."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "reachability", "source_node": "d"})
+
+    assert result["success"] is True, (
+        f"Reachability from leaf must succeed, got: {result}"
+    )
+    assert result["reachable"] == [], (
+        f"Leaf node 'd' can reach nobody, got: {result['reachable']}"
+    )
+
+
+def test_reachability_missing_source_node():
+    """Missing 'source_node' option returns error mentioning 'source_node'."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "reachability"})
+
+    assert result["success"] is False, "Missing source_node must return success=False"
+    assert "source_node" in result["error"], (
+        f"Error must mention 'source_node', got: {result['error']}"
+    )
+
+
+def test_reachability_nonexistent_node():
+    """Non-existent source node returns error mentioning the node name."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "reachability", "source_node": "z"})
+
+    assert result["success"] is False, "Non-existent node must return success=False"
+    assert "z" in result["error"], (
+        f"Error must mention the node name 'z', got: {result['error']}"
+    )
+
+
+def test_reachability_in_cyclic_graph():
+    """Reachability from 'a' in a→b→c→a cycle returns [b, c] (not 'a' itself)."""
+    result = analyze_dot(CYCLIC_GRAPH, {"analysis": "reachability", "source_node": "a"})
+
+    assert result["success"] is True, (
+        f"Reachability in cyclic graph must succeed, got: {result}"
+    )
+    assert set(result["reachable"]) == {"b", "c"}, (
+        f"From 'a' in CYCLIC_GRAPH must reach {{b,c}}, got: {result['reachable']}"
+    )
+
+
+def test_reachability_result_has_all_fields():
+    """Reachability result includes required fields: success, operation, source_node,
+    reachable, reachable_count."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "reachability", "source_node": "a"})
+
+    assert result["success"] is True, f"Reachability must succeed, got: {result}"
+
+    required_fields = [
+        "success",
+        "operation",
+        "source_node",
+        "reachable",
+        "reachable_count",
+    ]
+    for field in required_fields:
+        assert field in result, (
+            f"Reachability result must include '{field}', got keys: {list(result.keys())}"
+        )
+
+    assert result["operation"] == "reachability", (
+        f"operation must be 'reachability', got: {result['operation']}"
+    )
+    assert result["source_node"] == "a", (
+        f"source_node must echo the input 'a', got: {result['source_node']}"
+    )
+    assert result["reachable_count"] == len(result["reachable"]), (
+        f"reachable_count must equal len(reachable): "
+        f"{result['reachable_count']} != {len(result['reachable'])}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Unreachable operation tests
+# ---------------------------------------------------------------------------
+
+
+def test_unreachable_in_disconnected_graph():
+    """Disconnected graph with a→b and c→d: nodes 'a' and 'c' have no in-edges → unreachable."""
+    result = analyze_dot(DISCONNECTED, {"analysis": "unreachable"})
+
+    assert result["success"] is True, f"Unreachable must succeed, got: {result}"
+    unreachable = result["unreachable"]
+    assert "a" in unreachable, f"'a' must be unreachable, got: {unreachable}"
+    assert "c" in unreachable, f"'c' must be unreachable, got: {unreachable}"
+    assert "b" not in unreachable, (
+        f"'b' has in-edges and must not be unreachable, got: {unreachable}"
+    )
+    assert "d" not in unreachable, (
+        f"'d' has in-edges and must not be unreachable, got: {unreachable}"
+    )
+
+
+def test_unreachable_entry_hints_excluded():
+    """Entry hint nodes (e.g. 'start') are excluded from unreachable; orphan nodes are included."""
+    result = analyze_dot(ENTRY_HINT_GRAPH, {"analysis": "unreachable"})
+
+    assert result["success"] is True, (
+        f"Unreachable on ENTRY_HINT_GRAPH must succeed, got: {result}"
+    )
+    unreachable = result["unreachable"]
+    assert "start" not in unreachable, (
+        f"'start' is an entry hint and must be excluded, got: {unreachable}"
+    )
+    assert "orphan" in unreachable, (
+        f"'orphan' has no in-edges and is not a hint, must be unreachable, got: {unreachable}"
+    )
+
+
+def test_unreachable_fully_connected():
+    """Cyclic graph (all nodes have in-degree >= 1) returns empty unreachable list."""
+    result = analyze_dot(CYCLIC_GRAPH, {"analysis": "unreachable"})
+
+    assert result["success"] is True, (
+        f"Unreachable on CYCLIC_GRAPH must succeed, got: {result}"
+    )
+    assert result["unreachable"] == [], (
+        f"All nodes in CYCLIC_GRAPH have in-edges; unreachable must be [], got: {result['unreachable']}"
+    )
+
+
+def test_unreachable_returns_annotated_dot():
+    """Unreachable analysis returns annotated_dot with unreachable nodes colored red."""
+    result = analyze_dot(DISCONNECTED, {"analysis": "unreachable"})
+
+    assert result["success"] is True, f"Unreachable must succeed, got: {result}"
+    assert "annotated_dot" in result, "Result must include 'annotated_dot'"
+    assert isinstance(result["annotated_dot"], str), "annotated_dot must be a string"
+    assert "red" in result["annotated_dot"], (
+        f"annotated_dot must contain 'red' for unreachable nodes, got:\n{result['annotated_dot']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cycles operation tests
+# ---------------------------------------------------------------------------
+
+
+def test_cycles_in_cyclic_graph():
+    """Cycle detection in a→b→c→a returns has_cycles=True with the cycle nodes a,b,c."""
+    result = analyze_dot(CYCLIC_GRAPH, {"analysis": "cycles"})
+
+    assert result["success"] is True, f"Cycles must succeed, got: {result}"
+    assert result["has_cycles"] is True, "CYCLIC_GRAPH must have cycles"
+    assert result["cycle_count"] >= 1, "cycle_count must be at least 1"
+    # Each cycle is sorted; check a,b,c appear in the cycles
+    all_cycle_nodes: set[str] = set()
+    for cycle in result["cycles"]:
+        all_cycle_nodes.update(cycle)
+    assert {"a", "b", "c"}.issubset(all_cycle_nodes), (
+        f"Cycle must contain a, b, c; got cycles: {result['cycles']}"
+    )
+
+
+def test_cycles_in_dag():
+    """Cycle detection in a DAG returns has_cycles=False and empty cycles list."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "cycles"})
+
+    assert result["success"] is True, f"Cycles on DAG must succeed, got: {result}"
+    assert result["has_cycles"] is False, "SIMPLE_DAG has no cycles"
+    assert result["cycles"] == [], (
+        f"SIMPLE_DAG cycles must be [], got: {result['cycles']}"
+    )
+
+
+def test_cycles_returns_annotated_dot():
+    """Cycle detection in a cyclic graph returns annotated_dot with cycle edges colored red."""
+    result = analyze_dot(CYCLIC_GRAPH, {"analysis": "cycles"})
+
+    assert result["success"] is True, f"Cycles must succeed, got: {result}"
+    assert "annotated_dot" in result, "Result must include 'annotated_dot'"
+    assert result["annotated_dot"] is not None, (
+        "annotated_dot must not be None for cyclic graph"
+    )
+    assert "red" in result["annotated_dot"], (
+        f"annotated_dot must contain 'red' for cycle edges, got:\n{result['annotated_dot']}"
+    )
+
+
+def test_cycles_dag_annotated_dot_is_none():
+    """Cycle detection in a DAG returns annotated_dot=None (no cycles to highlight)."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "cycles"})
+
+    assert result["success"] is True, f"Cycles on DAG must succeed, got: {result}"
+    assert result["annotated_dot"] is None, (
+        f"DAG has no cycles so annotated_dot must be None, got: {result['annotated_dot']}"
+    )
