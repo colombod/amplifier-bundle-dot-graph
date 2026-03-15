@@ -44,6 +44,10 @@ _ENTRY_HINTS: frozenset[str] = frozenset(
     {"start", "entry", "root", "begin", "init", "source"}
 )
 
+# Maximum number of simple paths returned by the 'paths' operation before
+# truncation.  Capped to avoid combinatorial explosion on dense graphs.
+_PATH_CAP: int = 100
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -424,21 +428,19 @@ def _paths(G: nx.Graph, options: dict) -> dict:
     if target not in G:
         return _parse_error(f"Node '{target}' not found in graph")
 
-    _PATH_CAP = 100
     raw_paths: list[list[str]] = []
     truncated = False
 
-    for path in nx.all_simple_paths(G, source=source, target=target):
+    path_gen = nx.all_simple_paths(G, source=source, target=target)
+    for path in path_gen:
         raw_paths.append([str(n) for n in path])
-        if len(raw_paths) >= _PATH_CAP:
-            # Check if there are more paths beyond the cap.
+        if len(raw_paths) == _PATH_CAP:
+            # Peek from the same generator to check whether a 101st path exists.
             try:
-                next(nx.all_simple_paths(G, source=source, target=target))
-                # We already consumed _PATH_CAP paths; peek to see if any remain.
-                # Re-enumerate to detect truncation cleanly.
+                next(path_gen)
+                truncated = True  # a path beyond the cap was found
             except StopIteration:
-                pass
-            truncated = True
+                pass  # exactly _PATH_CAP paths — no truncation
             break
 
     return {
