@@ -10,6 +10,8 @@
 DOT fixtures defined as module-level constants.
 """
 
+import pydot
+
 from amplifier_module_tool_dot_graph.analyze import analyze_dot
 
 
@@ -649,8 +651,6 @@ def test_critical_path_single_node():
 
 def test_subgraph_extract_existing_cluster():
     """Extracting cluster_core from CLUSTERED_DOT returns 3 nodes (x,y,z) and parseable DOT."""
-    import pydot
-
     result = analyze_dot(
         CLUSTERED_DOT,
         {"analysis": "subgraph_extract", "cluster_name": "cluster_core"},

@@ -583,7 +583,7 @@ def _dispatch_subgraph_extract(dot_content: str, options: dict) -> dict:
     return _subgraph_extract(graph, dot_content, options)
 
 
-def _subgraph_extract(pydot_graph: pydot.Dot, dot_content: str, options: dict) -> dict:
+def _subgraph_extract(pydot_graph: pydot.Dot, _dot_content: str, options: dict) -> dict:
     """Extract a named cluster subgraph into a standalone DOT graph.
 
     Works on the pydot graph (not NetworkX) to preserve cluster
@@ -591,7 +591,7 @@ def _subgraph_extract(pydot_graph: pydot.Dot, dot_content: str, options: dict) -
 
     Args:
         pydot_graph: Parsed pydot graph containing clusters.
-        dot_content: Original DOT source (not used directly; kept for API symmetry).
+        _dot_content: Original DOT source (intentionally unused; kept for API symmetry).
         options: Must contain 'cluster_name' key with the name of the target cluster.
 
     Returns:
