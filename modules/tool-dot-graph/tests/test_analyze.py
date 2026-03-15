@@ -8,6 +8,8 @@
 DOT fixtures defined as module-level constants.
 """
 
+from amplifier_module_tool_dot_graph.analyze import analyze_dot
+
 
 # ---------------------------------------------------------------------------
 # DOT Fixtures (module-level constants)
@@ -45,8 +47,6 @@ COMPLEX_DAG = "digraph G { a -> b; a -> c; b -> d; c -> d; d -> e; d -> f }"
 
 def test_analyze_dot_invalid_content_returns_error():
     """Invalid DOT content returns success=False with descriptive error."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot("this is not dot content !!!###", {"analysis": "stats"})
 
     assert result["success"] is False, "Invalid DOT must return success=False"
@@ -57,8 +57,6 @@ def test_analyze_dot_invalid_content_returns_error():
 
 def test_analyze_dot_empty_content_returns_error():
     """Empty DOT content returns success=False with descriptive error."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot("", {"analysis": "stats"})
 
     assert result["success"] is False, "Empty DOT must return success=False"
@@ -69,8 +67,6 @@ def test_analyze_dot_empty_content_returns_error():
 
 def test_analyze_dot_unknown_analysis_returns_error():
     """Unknown analysis type returns success=False with descriptive error."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(SIMPLE_DAG, {"analysis": "unknown_operation_xyz"})
 
     assert result["success"] is False, "Unknown analysis must return success=False"
@@ -80,8 +76,6 @@ def test_analyze_dot_unknown_analysis_returns_error():
 
 def test_analyze_dot_missing_analysis_key_returns_error():
     """Options dict missing 'analysis' key returns success=False with descriptive error."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     # Options provided but without 'analysis' key
     result = analyze_dot(SIMPLE_DAG, {"some_other_key": "value"})
 
@@ -97,8 +91,6 @@ def test_analyze_dot_missing_analysis_key_returns_error():
 
 def test_stats_simple_dag():
     """Stats on a simple 4-node, 3-edge DAG returns correct counts and is_dag=True."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(SIMPLE_DAG, {"analysis": "stats"})
 
     assert result["success"] is True, f"Stats on valid DAG must succeed, got: {result}"
@@ -118,8 +110,6 @@ def test_stats_simple_dag():
 
 def test_stats_diamond_dag():
     """Stats on a 4-node diamond DAG returns correct counts and float density."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(DIAMOND_DAG, {"analysis": "stats"})
 
     assert result["success"] is True, (
@@ -142,8 +132,6 @@ def test_stats_diamond_dag():
 
 def test_stats_cyclic_graph():
     """Stats on a cyclic graph returns is_dag=False."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(CYCLIC_GRAPH, {"analysis": "stats"})
 
     assert result["success"] is True, (
@@ -156,8 +144,6 @@ def test_stats_cyclic_graph():
 
 def test_stats_disconnected_graph():
     """Stats on a disconnected graph reports 2 weakly connected components."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(DISCONNECTED, {"analysis": "stats"})
 
     assert result["success"] is True, (
@@ -170,8 +156,6 @@ def test_stats_disconnected_graph():
 
 def test_stats_single_node():
     """Stats on a single-node graph returns 1 node, 0 edges, 1 component."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(SINGLE_NODE, {"analysis": "stats"})
 
     assert result["success"] is True, (
@@ -188,8 +172,6 @@ def test_stats_single_node():
 def test_stats_result_has_all_fields():
     """Stats result includes all required fields: node_count, edge_count, density,
     is_directed, is_dag, weakly_connected_components, self_loops, nodes, operation, success."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(SIMPLE_DAG, {"analysis": "stats"})
 
     assert result["success"] is True, f"Stats must succeed, got: {result}"
@@ -224,8 +206,6 @@ def test_stats_result_has_all_fields():
 
 def test_stats_undirected_graph():
     """Stats on an undirected graph returns is_directed=False."""
-    from amplifier_module_tool_dot_graph.analyze import analyze_dot
-
     result = analyze_dot(UNDIRECTED, {"analysis": "stats"})
 
     assert result["success"] is True, f"Stats on UNDIRECTED must succeed, got: {result}"

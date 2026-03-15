@@ -39,6 +39,7 @@ _KNOWN_ANALYSES: frozenset[str] = frozenset(
 )
 
 # Entry-point node names exempt from "no incoming edges" warnings.
+# Consumed by the 'unreachable' operation when reporting unreachable-node warnings.
 _ENTRY_HINTS: frozenset[str] = frozenset(
     {"start", "entry", "root", "begin", "init", "source"}
 )
@@ -112,6 +113,9 @@ def _parse_dot(dot_content: str) -> pydot.Dot | None:
         return None
 
     # pydot prints parse errors to stdout — capture them to keep output clean.
+    # pydot currently prints errors to stdout only, not stderr; redirect_stdout
+    # is therefore sufficient. If a future pydot version shifts to stderr,
+    # this guard would need to be extended with redirect_stderr as well.
     captured = io.StringIO()
     graphs: list[pydot.Dot] | None = None
     with contextlib.redirect_stdout(captured):
