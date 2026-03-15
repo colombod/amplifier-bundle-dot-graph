@@ -4,6 +4,8 @@
 - Error handling: invalid content, empty content, unknown analysis, missing analysis key
 - Stats operation: simple DAG, diamond DAG, cyclic graph, disconnected graph,
   single node, undirected graph, result field coverage
+- Subgraph extract: existing cluster, nonexistent cluster, missing option, label preservation
+- Diff: added nodes, removed edges, added edges, identical graphs, missing option, invalid content
 
 DOT fixtures defined as module-level constants.
 """
@@ -48,6 +50,28 @@ PATHS_OVER_CAP = (
     + " ".join(f"c{j} -> z;" for j in range(10))
     + " }"
 )
+
+# Digraph with two clusters: cluster_core (x→y→z, label="Core") and
+# cluster_util (u→v, label="Util"), plus cross-cluster edges x→u and z→v.
+CLUSTERED_DOT = """digraph G {
+    subgraph cluster_core {
+        label = "Core";
+        x -> y;
+        y -> z;
+    }
+    subgraph cluster_util {
+        label = "Util";
+        u -> v;
+    }
+    x -> u;
+    z -> v;
+}"""
+
+# Linear chain: a→b→c→d
+DOT_V1 = "digraph G { a -> b; b -> c; c -> d }"
+
+# Modified version: a→b→c→e and d→e (c→d removed, c→e and d→e added, 'e' is new node)
+DOT_V2 = "digraph G { a -> b; b -> c; c -> e; d -> e }"
 
 
 # ---------------------------------------------------------------------------
@@ -616,3 +640,142 @@ def test_critical_path_single_node():
     assert result["length"] == 1, (
         f"Single node length must be 1, got: {result['length']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Subgraph extract operation tests
+# ---------------------------------------------------------------------------
+
+
+def test_subgraph_extract_existing_cluster():
+    """Extracting cluster_core from CLUSTERED_DOT returns 3 nodes (x,y,z) and parseable DOT."""
+    import pydot
+
+    result = analyze_dot(
+        CLUSTERED_DOT,
+        {"analysis": "subgraph_extract", "cluster_name": "cluster_core"},
+    )
+
+    assert result["success"] is True, f"Subgraph extract must succeed, got: {result}"
+    assert result["node_count"] == 3, (
+        f"cluster_core has 3 nodes (x, y, z), got: {result['node_count']}"
+    )
+    assert "extracted_dot" in result, "Result must include 'extracted_dot'"
+    # Result must be parseable DOT
+    parsed = pydot.graph_from_dot_data(result["extracted_dot"])
+    assert parsed is not None and len(parsed) > 0, (
+        f"extracted_dot must be parseable DOT, got:\n{result.get('extracted_dot')}"
+    )
+
+
+def test_subgraph_extract_nonexistent_cluster():
+    """Extracting a nonexistent cluster returns error mentioning the name and 'available'."""
+    result = analyze_dot(
+        CLUSTERED_DOT,
+        {"analysis": "subgraph_extract", "cluster_name": "cluster_nonexistent"},
+    )
+
+    assert result["success"] is False, "Nonexistent cluster must return success=False"
+    assert "cluster_nonexistent" in result["error"], (
+        f"Error must mention the cluster name, got: {result['error']}"
+    )
+    assert "available" in result["error"].lower(), (
+        f"Error must mention 'available', got: {result['error']}"
+    )
+
+
+def test_subgraph_extract_missing_cluster_name():
+    """Missing 'cluster_name' option returns error mentioning 'cluster_name'."""
+    result = analyze_dot(CLUSTERED_DOT, {"analysis": "subgraph_extract"})
+
+    assert result["success"] is False, "Missing cluster_name must return success=False"
+    assert "cluster_name" in result["error"], (
+        f"Error must mention 'cluster_name', got: {result['error']}"
+    )
+
+
+def test_subgraph_extract_preserves_label():
+    """Extracted cluster DOT preserves the label attribute ('Core' for cluster_core)."""
+    result = analyze_dot(
+        CLUSTERED_DOT,
+        {"analysis": "subgraph_extract", "cluster_name": "cluster_core"},
+    )
+
+    assert result["success"] is True, f"Subgraph extract must succeed, got: {result}"
+    assert "Core" in result["extracted_dot"], (
+        f"Extracted DOT must preserve label 'Core', got:\n{result['extracted_dot']}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Diff operation tests
+# ---------------------------------------------------------------------------
+
+
+def test_diff_detects_added_nodes():
+    """Diff V1→V2 detects 'e' as an added node."""
+    result = analyze_dot(DOT_V1, {"analysis": "diff", "dot_content_b": DOT_V2})
+
+    assert result["success"] is True, f"Diff must succeed, got: {result}"
+    assert "e" in result["added_nodes"], (
+        f"Node 'e' must be in added_nodes, got: {result['added_nodes']}"
+    )
+
+
+def test_diff_detects_removed_edges():
+    """Diff V1→V2 detects c→d as a removed edge."""
+    result = analyze_dot(DOT_V1, {"analysis": "diff", "dot_content_b": DOT_V2})
+
+    assert result["success"] is True, f"Diff must succeed, got: {result}"
+    removed = [tuple(e) for e in result["removed_edges"]]
+    assert ("c", "d") in removed, (
+        f"Edge (c, d) must be in removed_edges, got: {result['removed_edges']}"
+    )
+
+
+def test_diff_detects_added_edges():
+    """Diff V1→V2 detects c→e and d→e as added edges."""
+    result = analyze_dot(DOT_V1, {"analysis": "diff", "dot_content_b": DOT_V2})
+
+    assert result["success"] is True, f"Diff must succeed, got: {result}"
+    added = [tuple(e) for e in result["added_edges"]]
+    assert ("c", "e") in added, (
+        f"Edge (c, e) must be in added_edges, got: {result['added_edges']}"
+    )
+    assert ("d", "e") in added, (
+        f"Edge (d, e) must be in added_edges, got: {result['added_edges']}"
+    )
+
+
+def test_diff_identical_graphs():
+    """Diff of a graph against itself returns all empty lists."""
+    result = analyze_dot(DOT_V1, {"analysis": "diff", "dot_content_b": DOT_V1})
+
+    assert result["success"] is True, f"Diff must succeed, got: {result}"
+    assert result["added_nodes"] == [], f"No nodes added, got: {result['added_nodes']}"
+    assert result["removed_nodes"] == [], (
+        f"No nodes removed, got: {result['removed_nodes']}"
+    )
+    assert result["added_edges"] == [], f"No edges added, got: {result['added_edges']}"
+    assert result["removed_edges"] == [], (
+        f"No edges removed, got: {result['removed_edges']}"
+    )
+
+
+def test_diff_missing_dot_content_b():
+    """Missing 'dot_content_b' option returns error mentioning 'dot_content_b'."""
+    result = analyze_dot(DOT_V1, {"analysis": "diff"})
+
+    assert result["success"] is False, "Missing dot_content_b must return success=False"
+    assert "dot_content_b" in result["error"], (
+        f"Error must mention 'dot_content_b', got: {result['error']}"
+    )
+
+
+def test_diff_invalid_dot_content_b():
+    """Invalid DOT in dot_content_b returns success=False."""
+    result = analyze_dot(
+        DOT_V1, {"analysis": "diff", "dot_content_b": "this is not dot !!!###"}
+    )
+
+    assert result["success"] is False, "Invalid dot_content_b must return success=False"

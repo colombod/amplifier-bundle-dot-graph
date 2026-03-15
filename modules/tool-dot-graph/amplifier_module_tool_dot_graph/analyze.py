@@ -567,23 +567,200 @@ def _annotate_edges(
 
 
 # ---------------------------------------------------------------------------
-# Placeholder handlers for special-routed operations
+# Subgraph extract operation
+# ---------------------------------------------------------------------------
+
+
+def _dispatch_subgraph_extract(dot_content: str, options: dict) -> dict:
+    """Dispatch subgraph_extract operation (routed before NetworkX conversion).
+
+    Parses DOT to pydot to preserve cluster structure, then delegates to
+    _subgraph_extract which works directly on the pydot graph.
+    """
+    graph = _parse_dot(dot_content)
+    if graph is None:
+        return _parse_error("Failed to parse DOT content (syntax error or empty input)")
+    return _subgraph_extract(graph, dot_content, options)
+
+
+def _subgraph_extract(pydot_graph: pydot.Dot, dot_content: str, options: dict) -> dict:
+    """Extract a named cluster subgraph into a standalone DOT graph.
+
+    Works on the pydot graph (not NetworkX) to preserve cluster
+    structure, labels, and attributes.
+
+    Args:
+        pydot_graph: Parsed pydot graph containing clusters.
+        dot_content: Original DOT source (not used directly; kept for API symmetry).
+        options: Must contain 'cluster_name' key with the name of the target cluster.
+
+    Returns:
+        {
+            success: True,
+            operation: "subgraph_extract",
+            cluster_name: str,
+            extracted_dot: str,   # standalone DOT string for the cluster
+            node_count: int,
+            edge_count: int,
+        }
+        or {success: False, error: str} on failure.
+    """
+    if "cluster_name" not in options:
+        return _parse_error("Missing required 'cluster_name' in options")
+
+    cluster_name = options["cluster_name"]
+
+    # Search direct subgraph children, stripping any surrounding quotes from names.
+    target_cluster: pydot.Subgraph | None = None
+    available: list[str] = []
+    for sg in pydot_graph.get_subgraph_list():
+        sg_name = (sg.get_name() or "").strip('"')
+        available.append(sg_name)
+        if sg_name == cluster_name:
+            target_cluster = sg
+            break
+
+    if target_cluster is None:
+        return _parse_error(
+            f"Cluster '{cluster_name}' not found in graph. "
+            f"Available clusters: {available}"
+        )
+
+    # Build a standalone pydot.Dot from the cluster contents.
+    new_graph = pydot.Dot(graph_type="digraph")
+
+    # Copy all cluster-level attributes (e.g. label) to the new graph.
+    for attr_key, attr_val in target_cluster.get_attributes().items():
+        new_graph.set(attr_key, attr_val)
+
+    # Copy nodes with obj_dict to preserve all attributes.
+    for node in target_cluster.get_node_list():
+        new_node = pydot.Node(node.get_name())
+        new_node.obj_dict = node.obj_dict.copy()
+        new_graph.add_node(new_node)
+
+    # Copy edges with obj_dict to preserve all attributes.
+    for edge in target_cluster.get_edge_list():
+        new_edge = pydot.Edge(edge.get_source(), edge.get_destination())
+        new_edge.obj_dict = edge.obj_dict.copy()
+        new_graph.add_edge(new_edge)
+
+    extracted_dot = new_graph.to_string()
+
+    # Derive node/edge counts via NetworkX (handles implicitly-defined nodes).
+    G = _pydot_to_networkx(new_graph)
+    node_count = G.number_of_nodes()
+    edge_count = G.number_of_edges()
+
+    return {
+        "success": True,
+        "operation": "subgraph_extract",
+        "cluster_name": cluster_name,
+        "extracted_dot": extracted_dot,
+        "node_count": node_count,
+        "edge_count": edge_count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Diff operation
 # ---------------------------------------------------------------------------
 
 
 def _dispatch_diff(dot_content: str, options: dict) -> dict:
     """Dispatch diff operation (routed before NetworkX conversion).
 
-    Compares two DOT graphs for structural differences.
-    Not yet implemented — placeholder for future task.
+    Compares two DOT graphs for structural differences (nodes and edges).
     """
-    return _parse_error("Analysis 'diff' is not yet implemented")
+    return _diff(dot_content, options)
 
 
-def _dispatch_subgraph_extract(dot_content: str, options: dict) -> dict:
-    """Dispatch subgraph_extract operation (routed before NetworkX conversion).
+def _diff(dot_content_a: str, options: dict) -> dict:
+    """Compute structural differences between two DOT graphs.
 
-    Extracts a subgraph around specified nodes.
-    Not yet implemented — placeholder for future task.
+    Parses both DOT strings independently, converts to NetworkX, then
+    compares node sets and edge sets.  MultiDiGraph parallel-edge keys
+    are ignored so only (u, v) pairs are compared.
+
+    Args:
+        dot_content_a: First (baseline) DOT graph string.
+        options: Must contain 'dot_content_b' key with the second DOT string.
+
+    Returns:
+        {
+            success: True,
+            operation: "diff",
+            added_nodes: list[str],           # in B but not A, sorted
+            removed_nodes: list[str],         # in A but not B, sorted
+            added_edges: list[list[str]],     # [u, v] pairs in B but not A, sorted
+            removed_edges: list[list[str]],   # [u, v] pairs in A but not B, sorted
+            summary: {
+                added_nodes_count: int,
+                removed_nodes_count: int,
+                added_edges_count: int,
+                removed_edges_count: int,
+                unchanged_nodes: int,
+                unchanged_edges: int,
+            },
+        }
+        or {success: False, error: str} on failure.
     """
-    return _parse_error("Analysis 'subgraph_extract' is not yet implemented")
+    if "dot_content_b" not in options:
+        return _parse_error("Missing required 'dot_content_b' in options")
+
+    dot_content_b: str = options["dot_content_b"]
+
+    # Parse both DOT strings independently.
+    graph_a = _parse_dot(dot_content_a)
+    if graph_a is None:
+        return _parse_error("Failed to parse DOT content (syntax error or empty input)")
+
+    graph_b = _parse_dot(dot_content_b)
+    if graph_b is None:
+        return _parse_error(
+            "Failed to parse 'dot_content_b' (syntax error or empty input)"
+        )
+
+    # Convert both to NetworkX graphs.
+    G_a = _pydot_to_networkx(graph_a)
+    G_b = _pydot_to_networkx(graph_b)
+
+    # Compare node sets.
+    nodes_a: set[str] = {str(n) for n in G_a.nodes()}
+    nodes_b: set[str] = {str(n) for n in G_b.nodes()}
+
+    added_nodes = sorted(nodes_b - nodes_a)
+    removed_nodes = sorted(nodes_a - nodes_b)
+
+    # Compare edge sets, ignoring MultiDiGraph parallel-edge keys.
+    # Cast to MultiDiGraph so pyright knows edges(keys=True) yields (u, v, key) triples.
+    MDG_a = cast(nx.MultiDiGraph, G_a)
+    MDG_b = cast(nx.MultiDiGraph, G_b)
+    edges_a: set[tuple[str, str]] = {
+        (str(u), str(v)) for u, v, _ in MDG_a.edges(keys=True)
+    }
+    edges_b: set[tuple[str, str]] = {
+        (str(u), str(v)) for u, v, _ in MDG_b.edges(keys=True)
+    }
+
+    added_edges = sorted([list(e) for e in edges_b - edges_a])
+    removed_edges = sorted([list(e) for e in edges_a - edges_b])
+
+    summary = {
+        "added_nodes_count": len(added_nodes),
+        "removed_nodes_count": len(removed_nodes),
+        "added_edges_count": len(added_edges),
+        "removed_edges_count": len(removed_edges),
+        "unchanged_nodes": len(nodes_a & nodes_b),
+        "unchanged_edges": len(edges_a & edges_b),
+    }
+
+    return {
+        "success": True,
+        "operation": "diff",
+        "added_nodes": added_nodes,
+        "removed_nodes": removed_nodes,
+        "added_edges": added_edges,
+        "removed_edges": removed_edges,
+        "summary": summary,
+    }
