@@ -47,17 +47,17 @@ def test_bundle_md_frontmatter_has_bundle_name():
 
 
 def test_bundle_md_frontmatter_has_version():
-    """Frontmatter must contain bundle.version = '0.1.0'."""
+    """Frontmatter must contain bundle.version = '0.2.0'."""
     content = BUNDLE_MD_PATH.read_text()
     frontmatter, _ = _parse_frontmatter(content)
-    assert frontmatter["bundle"]["version"] == "0.1.0", (
-        f"bundle.version must be '0.1.0', got: {frontmatter['bundle'].get('version')}"
+    assert frontmatter["bundle"]["version"] == "0.2.0", (
+        f"bundle.version must be '0.2.0', got: {frontmatter['bundle'].get('version')}"
     )
 
 
 def test_bundle_md_frontmatter_has_description():
     """Frontmatter must contain the expected description."""
-    expected = "General-purpose DOT/Graphviz infrastructure \u2014 knowledge, tools, and graph intelligence"
+    expected = "General-purpose DOT/Graphviz infrastructure \u2014 knowledge, tools, graph intelligence, and codebase discovery"
     content = BUNDLE_MD_PATH.read_text()
     frontmatter, _ = _parse_frontmatter(content)
     assert frontmatter["bundle"]["description"] == expected, (
