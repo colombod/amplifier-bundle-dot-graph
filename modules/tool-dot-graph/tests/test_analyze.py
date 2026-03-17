@@ -779,3 +779,99 @@ def test_diff_invalid_dot_content_b():
     )
 
     assert result["success"] is False, "Invalid dot_content_b must return success=False"
+
+
+# ---------------------------------------------------------------------------
+# Subgraph cluster recursion tests (Improvement 2)
+# ---------------------------------------------------------------------------
+
+# DOT where ALL nodes live inside subgraph clusters — no top-level edges.
+# A flat pydot walk returns 0 nodes; the recursive fix returns all 5.
+ALL_IN_CLUSTERS_DOT = """digraph G {
+    subgraph cluster_a {
+        a -> b;
+        b -> c;
+    }
+    subgraph cluster_b {
+        x -> y;
+    }
+}"""
+
+# DOT with deeply-nested clusters (cluster inside cluster).
+NESTED_CLUSTERS_DOT = """digraph G {
+    subgraph cluster_outer {
+        subgraph cluster_inner {
+            p -> q;
+            q -> r;
+        }
+        r -> s;
+    }
+}"""
+
+
+def test_stats_all_nodes_in_clusters_returns_correct_count():
+    """Stats on a DOT where every node is inside subgraph clusters returns
+    the correct node/edge count (not 0).
+
+    Without the recursive subgraph walk, from_pydot sees no top-level nodes
+    or edges and returns node_count=0.  With the fix, all 5 nodes are found.
+    """
+    result = analyze_dot(ALL_IN_CLUSTERS_DOT, {"analysis": "stats"})
+
+    assert result["success"] is True, f"Stats must succeed, got: {result}"
+    assert result["node_count"] == 5, (
+        f"ALL_IN_CLUSTERS_DOT has 5 nodes (a,b,c,x,y), got: {result['node_count']} — "
+        "subgraph recursion may be missing"
+    )
+    assert result["edge_count"] == 3, (
+        f"ALL_IN_CLUSTERS_DOT has 3 edges, got: {result['edge_count']}"
+    )
+
+
+def test_stats_deeply_nested_clusters_returns_correct_count():
+    """Stats on a DOT with clusters nested two levels deep returns correct counts."""
+    result = analyze_dot(NESTED_CLUSTERS_DOT, {"analysis": "stats"})
+
+    assert result["success"] is True, (
+        f"Stats on nested clusters must succeed, got: {result}"
+    )
+    assert result["node_count"] == 4, (
+        f"NESTED_CLUSTERS_DOT has 4 nodes (p,q,r,s), got: {result['node_count']}"
+    )
+    assert result["edge_count"] == 3, (
+        f"NESTED_CLUSTERS_DOT has 3 edges, got: {result['edge_count']}"
+    )
+
+
+def test_stats_clustered_dot_includes_cross_cluster_nodes():
+    """Stats on CLUSTERED_DOT (cross-cluster edges at top level) counts all nodes
+    from both clusters and top-level edges."""
+    result = analyze_dot(CLUSTERED_DOT, {"analysis": "stats"})
+
+    assert result["success"] is True, (
+        f"Stats on CLUSTERED_DOT must succeed, got: {result}"
+    )
+    # cluster_core: x->y->z (3 nodes), cluster_util: u->v (2 nodes)
+    # Top-level: x->u, z->v (no new nodes; x,u,z,v already in clusters)
+    assert result["node_count"] == 5, (
+        f"CLUSTERED_DOT has 5 nodes (x,y,z,u,v), got: {result['node_count']}"
+    )
+    assert result["edge_count"] == 5, (
+        f"CLUSTERED_DOT has 5 edges (x->y, y->z, u->v, x->u, z->v), "
+        f"got: {result['edge_count']}"
+    )
+
+
+def test_stats_simple_dag_unaffected_by_subgraph_fix():
+    """Stats on a flat (no-cluster) DAG still works correctly after the fix."""
+    result = analyze_dot(SIMPLE_DAG, {"analysis": "stats"})
+
+    assert result["success"] is True, (
+        f"Stats on SIMPLE_DAG must still succeed, got: {result}"
+    )
+    assert result["node_count"] == 4, (
+        f"SIMPLE_DAG still has 4 nodes, got: {result['node_count']}"
+    )
+    assert result["edge_count"] == 3, (
+        f"SIMPLE_DAG still has 3 edges, got: {result['edge_count']}"
+    )

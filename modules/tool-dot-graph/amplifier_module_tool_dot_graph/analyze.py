@@ -144,10 +144,40 @@ def _parse_dot(dot_content: str) -> pydot.Dot | None:
     return graphs[0]
 
 
+def _collect_all_nodes_and_edges(
+    pydot_graph: pydot.Graph,
+) -> tuple[list[pydot.Node], list[pydot.Edge]]:
+    """Recursively collect nodes and edges from a graph and all its subgraphs.
+
+    pydot only exposes top-level nodes/edges via get_nodes()/get_edges().
+    Assembled DOT files wrap every real node inside ``subgraph cluster_*``
+    blocks, so a flat walk returns 0 nodes.  This helper recurses into every
+    subgraph so that nothing is missed.
+
+    Args:
+        pydot_graph: A pydot Graph, Dot, or Subgraph to walk.
+
+    Returns:
+        (nodes, edges) — flat lists accumulated across all nesting levels.
+    """
+    nodes: list[pydot.Node] = list(pydot_graph.get_nodes())
+    edges: list[pydot.Edge] = list(pydot_graph.get_edges())
+    for subgraph in pydot_graph.get_subgraphs():
+        sub_nodes, sub_edges = _collect_all_nodes_and_edges(subgraph)
+        nodes.extend(sub_nodes)
+        edges.extend(sub_edges)
+    return nodes, edges
+
+
 def _pydot_to_networkx(graph: pydot.Dot) -> nx.Graph:
     """Convert a pydot graph to a NetworkX graph, filtering pseudo-nodes.
 
-    Uses nx.drawing.nx_pydot.from_pydot() which produces:
+    Recursively walks all ``subgraph cluster_*`` wrappers so that nodes
+    declared inside clusters are included.  A plain ``from_pydot`` call only
+    sees top-level nodes and edges; assembled DOT files place everything
+    inside clusters, yielding 0 nodes without the recursive walk.
+
+    Produces:
     - MultiDiGraph for digraph pydot graphs
     - MultiGraph for undirected pydot graphs
 
@@ -160,9 +190,33 @@ def _pydot_to_networkx(graph: pydot.Dot) -> nx.Graph:
     Returns:
         NetworkX MultiDiGraph or MultiGraph with pseudo-nodes removed.
     """
-    G = nx.drawing.nx_pydot.from_pydot(graph)
+    graph_type = graph.get_type()
+    G: nx.Graph
+    if graph_type == "digraph":
+        G = nx.MultiDiGraph()
+    else:
+        G = nx.MultiGraph()
 
-    # Remove pseudo-nodes that pydot injects for global style declarations.
+    # Collect nodes and edges from the full graph tree (including clusters).
+    all_nodes, all_edges = _collect_all_nodes_and_edges(graph)
+
+    # Add explicit nodes, skipping pydot style-declaration pseudo-nodes.
+    for node in all_nodes:
+        name = node.get_name()
+        if str(name).strip('"') not in _PSEUDO_NODES:
+            G.add_node(name)
+
+    # Add edges; implicitly-declared endpoint nodes are created by networkx.
+    for edge in all_edges:
+        src = edge.get_source()
+        dst = edge.get_destination()
+        if (
+            str(src).strip('"') not in _PSEUDO_NODES
+            and str(dst).strip('"') not in _PSEUDO_NODES
+        ):
+            G.add_edge(src, dst)
+
+    # Final sweep: remove any pseudo-nodes that slipped in via edge endpoints.
     pseudo_nodes = [n for n in G.nodes() if str(n).strip('"') in _PSEUDO_NODES]
     G.remove_nodes_from(pseudo_nodes)
 
