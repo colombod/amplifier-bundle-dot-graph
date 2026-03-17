@@ -11,7 +11,10 @@ author: "DOT Graph Bundle"
 tags: ["discovery", "investigation", "sub-recipe", "dot-graph"]
 
 context:
-  topic: {}        # Object with 'name' and 'slug' keys, provided by caller
+  topic:
+    name: ""         # Topic name — populated by caller (discovery-pipeline)
+    slug: ""         # Topic slug — populated by caller (discovery-pipeline)
+    description: ""  # Topic description — populated by caller
   fidelity: "standard"
   repo_path: ""
   output_dir: ""
