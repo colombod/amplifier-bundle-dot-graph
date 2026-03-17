@@ -132,7 +132,7 @@ stages:
           # Try amplifier_module_tool_dot_graph.prescan
           try:
               from amplifier_module_tool_dot_graph import prescan
-              structure = prescan(repo_path=repo_path)
+              structure = prescan.prescan_repo(repo_path)
               result["structure"] = structure
           except Exception as e:
               # Fallback: basic directory listing
@@ -324,8 +324,33 @@ stages:
           # Try amplifier_module_tool_dot_graph.assemble
           try:
               from amplifier_module_tool_dot_graph import assemble
-              result = assemble(output_dir=output_dir, topics=topics)
-              manifest.update(result)
+              modules_dir = Path(output_dir) / "modules"
+              # Build assemble_hierarchy manifest: topics → modules in "discovery" subsystem
+              modules_def = {
+                  topic.get("slug", ""): {
+                      "dot_path": str(modules_dir / topic.get("slug", "") / "diagram.dot"),
+                      "subsystem": "discovery",
+                  }
+                  for topic in topics if topic.get("slug")
+              }
+              assemble_manifest = {
+                  "modules": modules_def,
+                  "subsystems": {"discovery": {"modules": list(modules_def.keys())}},
+              }
+              hierarchy = assemble.assemble_hierarchy(assemble_manifest, output_dir)
+              manifest["assembly"] = hierarchy
+              for topic in topics:
+                  slug = topic.get("slug", "")
+                  module_dir = modules_dir / slug
+                  manifest["topics"].append({
+                      "name": topic.get("name", ""),
+                      "slug": slug,
+                      "diagram": str(module_dir / "diagram.dot") if (module_dir / "diagram.dot").exists() else None,
+                      "findings": str(module_dir / "findings.md") if (module_dir / "findings.md").exists() else None,
+                  })
+              manifest_path = Path(output_dir) / "manifest.json"
+              manifest_path.write_text(json.dumps(manifest, indent=2))
+              manifest["manifest_path"] = str(manifest_path)
           except Exception as e:
               # Fallback: manual manifest construction
               try:
