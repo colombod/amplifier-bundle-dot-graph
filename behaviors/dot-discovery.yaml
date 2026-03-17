@@ -6,6 +6,14 @@ bundle:
 includes:
   - bundle: dot-graph:behaviors/dot-core
 
+agents:
+  include:
+    - dot-graph:discovery-prescan
+    - dot-graph:discovery-code-tracer
+    - dot-graph:discovery-behavior-observer
+    - dot-graph:discovery-integration-mapper
+    - dot-graph:discovery-synthesizer
+
 context:
   include:
     - dot-graph:context/discovery-awareness.md

@@ -12,7 +12,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).parent.parent
 
-# The 21 expected bundle files
+# The 24 expected bundle files (21 original + 3 Phase A additions)
 EXPECTED_FILES = [
     ".gitignore",
     "bundle.md",
@@ -35,6 +35,10 @@ EXPECTED_FILES = [
     "skills/dot-as-analysis/SKILL.md",
     "skills/dot-quality/SKILL.md",
     "skills/dot-graph-intelligence/SKILL.md",
+    # Phase A: discovery architecture
+    "behaviors/dot-core.yaml",
+    "behaviors/dot-discovery.yaml",
+    "context/discovery-awareness.md",
 ]
 
 SKILL_FILES = [
@@ -46,22 +50,22 @@ SKILL_FILES = [
 ]
 
 
-# --- Step 1: Complete file tree (21 files) ---
+# --- Step 1: Complete file tree (24 files) ---
 
 
 @pytest.mark.parametrize("rel_path", EXPECTED_FILES)
 def test_bundle_file_exists(rel_path):
-    """Step 1: Each of the 21 expected bundle files exists."""
+    """Step 1: Each of the 24 expected bundle files exists."""
     path = REPO_ROOT / rel_path
     assert path.exists(), f"Bundle file missing: {rel_path}"
     assert path.is_file(), f"Expected file but found directory: {rel_path}"
 
 
 def test_total_file_count():
-    """Step 6: Total bundle file count is exactly 21."""
+    """Step 6: Total bundle file count is exactly 24 (21 original + 3 Phase A)."""
     present = [f for f in EXPECTED_FILES if (REPO_ROOT / f).exists()]
-    assert len(present) == 21, (
-        f"Expected 21 bundle files, found {len(present)}. "
+    assert len(present) == 24, (
+        f"Expected 24 bundle files, found {len(present)}. "
         f"Missing: {[f for f in EXPECTED_FILES if f not in present]}"
     )
 

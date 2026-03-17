@@ -106,3 +106,30 @@ def test_behavior_context_includes_discovery_awareness(data):
         f"context.include must contain 'dot-graph:context/discovery-awareness.md', "
         f"got: {data['context']['include']}"
     )
+
+
+# --- agents section ---
+
+
+def test_behavior_has_agents_key(data):
+    """behaviors/dot-discovery.yaml must have a top-level 'agents' key."""
+    assert "agents" in data, "behaviors/dot-discovery.yaml must have 'agents' key"
+
+
+def test_behavior_agents_has_include(data):
+    """agents must have an 'include' key."""
+    assert "include" in data["agents"], "agents must have an 'include' key"
+
+
+def test_behavior_agents_includes_all_discovery_agents(data):
+    """agents.include must contain all 5 discovery agent references."""
+    expected_agents = [
+        "dot-graph:discovery-prescan",
+        "dot-graph:discovery-code-tracer",
+        "dot-graph:discovery-behavior-observer",
+        "dot-graph:discovery-integration-mapper",
+        "dot-graph:discovery-synthesizer",
+    ]
+    actual = data["agents"]["include"]
+    for agent in expected_agents:
+        assert agent in actual, f"agents.include must contain '{agent}', got: {actual}"

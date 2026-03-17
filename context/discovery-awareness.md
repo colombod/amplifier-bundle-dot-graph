@@ -7,13 +7,24 @@ You have access to a codebase discovery pipeline that systematically generates D
 - **New codebase onboarding** — automatically map the architecture before diving in
 - **Architecture documentation** — generate and maintain up-to-date architectural diagrams
 - **Change impact analysis** — understand how changes propagate through the system
+- **Multi-module understanding** — map how components integrate across boundaries
+
+## Fidelity Tiers
+
+Discovery runs at three fidelity tiers: `quick` (patch affected files only), `standard` (2 agents per topic with consensus), `deep` (3 agents per topic with full reconciliation). Default is `standard`.
 
 ## Available Capabilities
 
-**Agents**: `discovery-prescan` (topic selection), `discovery-code-tracer` (execution paths), `discovery-behavior-observer` (pattern catalog), `discovery-integration-mapper` (boundary mapping), `discovery-synthesizer` (consensus reconciliation)
+**Investigation Agents:**
+- `discovery-prescan` — selects investigation topics from structural inventory
+- `discovery-code-tracer` — HOW: traces execution paths with file:line evidence
+- `discovery-behavior-observer` — WHAT: catalogs 10+ real instances, quantifies patterns
+- `discovery-integration-mapper` — WHERE/WHY: maps cross-boundary connections
+- `discovery-synthesizer` — reconciles multi-agent outputs into consensus DOT
 
-**Recipes**: `discovery-pipeline` (full orchestrated pipeline with approval gates)
+**Recipes:** `discovery-pipeline` (full orchestrated pipeline with approval gates)
 
 ## Delegation
 
-- **Codebase discovery** (generate architecture diagrams from code): delegate to the discovery pipeline recipe. It handles multi-agent investigation, consensus reconciliation, and hierarchical DOT assembly.
+- **Codebase discovery** (generate architecture diagrams from code): delegate to the discovery pipeline recipe. It handles prescan, multi-agent investigation, consensus reconciliation, and hierarchical DOT assembly.
+- **Do NOT** invoke discovery agents directly — the recipe controls agent dispatch based on fidelity tier and topic selection.
