@@ -1,0 +1,36 @@
+digraph dependency_cycle_demo {
+    rankdir=LR
+    fontname="Helvetica"
+    fontsize=13
+    label="Microservice Dependency Analysis — Circular Dependency Detected"
+    bgcolor="white"
+
+    node [fontname="Helvetica", fontsize=10, shape=box, style="rounded,filled"]
+    edge [fontname="Helvetica", fontsize=9]
+
+    // Healthy services
+    gateway   [label="API Gateway",      fillcolor="#C8E6C9"]
+    auth      [label="Auth Service",     fillcolor="#C8E6C9"]
+    users     [label="User Service",     fillcolor="#C8E6C9"]
+    orders    [label="Order Service",    fillcolor="#BBDEFB"]
+    inventory [label="Inventory Svc",    fillcolor="#BBDEFB"]
+    notify    [label="Notify Service",   fillcolor="#BBDEFB"]
+
+    // Circular dependency triangle
+    billing   [label="Billing Service",  fillcolor="#FFE0B2"]
+    shipping  [label="Shipping Service", fillcolor="#FFE0B2"]
+    warehouse [label="Warehouse Svc",    fillcolor="#FFE0B2"]
+
+    // Clean paths
+    gateway -> auth
+    gateway -> orders
+    auth -> users
+    orders -> inventory
+    orders -> notify
+    orders -> billing
+
+    // Circular dependency: billing -> shipping -> warehouse -> billing
+    billing   -> shipping   [label="needs rate"]
+    shipping  -> warehouse  [label="needs stock"]
+    warehouse -> billing    [label="needs invoice"]
+}
