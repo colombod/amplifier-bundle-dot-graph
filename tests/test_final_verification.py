@@ -1,8 +1,10 @@
 """Final verification of complete file tree, imports, scripts, YAML, skills, and file count.
 
-Task 18: Verifies all 21 bundle files are present and functional.
+Task 18: Verifies all 35 bundle files are present and functional.
+Phase A v2: Updated to include 8 new discovery agent and context files (total 35).
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,7 +14,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).parent.parent
 
-# The 27 expected bundle files (21 original + 3 Phase A + 3 Phase D recipes)
+# The 35 expected bundle files (21 original + 3 Phase A + 3 Phase D recipes + 8 Phase A v2)
 EXPECTED_FILES = [
     ".gitignore",
     "bundle.md",
@@ -43,6 +45,15 @@ EXPECTED_FILES = [
     "recipes/discovery-pipeline.yaml",
     "recipes/discovery-investigate-topic.yaml",
     "recipes/discovery-synthesize-module.yaml",
+    # Phase A v2: new discovery agent and context files
+    "agents/discovery-level-synthesizer.md",
+    "agents/discovery-subsystem-synthesizer.md",
+    "agents/discovery-overview-synthesizer.md",
+    "agents/discovery-combiner.md",
+    "context/discovery-level-synthesizer-instructions.md",
+    "context/discovery-subsystem-synthesizer-instructions.md",
+    "context/discovery-overview-synthesizer-instructions.md",
+    "context/discovery-combiner-instructions.md",
 ]
 
 SKILL_FILES = [
@@ -54,22 +65,22 @@ SKILL_FILES = [
 ]
 
 
-# --- Step 1: Complete file tree (27 files) ---
+# --- Step 1: Complete file tree (35 files) ---
 
 
 @pytest.mark.parametrize("rel_path", EXPECTED_FILES)
 def test_bundle_file_exists(rel_path):
-    """Step 1: Each of the 24 expected bundle files exists."""
+    """Step 1: Each of the 35 expected bundle files exists."""
     path = REPO_ROOT / rel_path
     assert path.exists(), f"Bundle file missing: {rel_path}"
     assert path.is_file(), f"Expected file but found directory: {rel_path}"
 
 
 def test_total_file_count():
-    """Step 6: Total bundle file count is exactly 27 (21 original + 3 Phase A + 3 Phase D)."""
+    """Step 6: Total bundle file count is exactly 35 (27 prior + 8 Phase A v2)."""
     present = [f for f in EXPECTED_FILES if (REPO_ROOT / f).exists()]
-    assert len(present) == 27, (
-        f"Expected 27 bundle files, found {len(present)}. "
+    assert len(present) == 35, (
+        f"Expected 35 bundle files, found {len(present)}. "
         f"Missing: {[f for f in EXPECTED_FILES if f not in present]}"
     )
 
@@ -89,7 +100,7 @@ def test_tool_module_import():
         capture_output=True,
         text=True,
         env={
-            **__import__("os").environ,
+            **os.environ,
             "PYTHONPATH": module_path,
         },
     )
@@ -104,18 +115,14 @@ def test_dot_validate_sh_is_executable():
     """Step 3a: scripts/dot-validate.sh is executable."""
     script = REPO_ROOT / "scripts" / "dot-validate.sh"
     assert script.is_file(), "dot-validate.sh not found"
-    assert __import__("os").access(script, __import__("os").X_OK), (
-        "dot-validate.sh is not executable"
-    )
+    assert os.access(script, os.X_OK), "dot-validate.sh is not executable"
 
 
 def test_dot_render_sh_is_executable():
     """Step 3b: scripts/dot-render.sh is executable."""
     script = REPO_ROOT / "scripts" / "dot-render.sh"
     assert script.is_file(), "dot-render.sh not found"
-    assert __import__("os").access(script, __import__("os").X_OK), (
-        "dot-render.sh is not executable"
-    )
+    assert os.access(script, os.X_OK), "dot-render.sh is not executable"
 
 
 def test_scripts_respond_to_help():
