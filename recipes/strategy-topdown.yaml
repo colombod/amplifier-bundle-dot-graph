@@ -341,7 +341,10 @@ stages:
           from datetime import datetime, timezone
           from pathlib import Path
 
-          output_dir = "{{output_dir}}"
+          # Use scan_result.output_dir — resolved at runtime by the prescan step.
+          # Do NOT use {{output_dir}} — its default contains {{repo_path}} which
+          # the template engine does not recursively resolve (Known Gotcha #5).
+          output_dir = "{{scan_result.output_dir}}"
           repo_path = "{{repo_path}}"
           fidelity = "{{fidelity}}"
 

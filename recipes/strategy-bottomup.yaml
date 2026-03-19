@@ -344,8 +344,12 @@ stages:
           from datetime import datetime, timezone
           from pathlib import Path
 
-          output_dir = "{{subsystems_result.output_dir}}"
-          repo_path = "{{traversal_plan.repo_path}}"
+          # Use prescan_result.output_dir — resolved at runtime by the prescan step.
+          # Do NOT use {{output_dir}} or chained refs like {{subsystems_result.output_dir}}
+          # — the default contains {{repo_path}} which the template engine does not
+          # recursively resolve (Known Gotcha #5).
+          output_dir = "{{prescan_result.output_dir}}"
+          repo_path = "{{prescan_result.repo_path}}"
           fidelity = "{{fidelity}}"
 
           # Get current git commit
