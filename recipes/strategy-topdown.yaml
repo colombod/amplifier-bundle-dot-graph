@@ -341,11 +341,14 @@ stages:
           from datetime import datetime, timezone
           from pathlib import Path
 
-          # Use scan_result.output_dir — resolved at runtime by the prescan step.
-          # Do NOT use {{output_dir}} — its default contains {{repo_path}} which
+          # Resolve output_dir from repo_path in Python at runtime.
+          # Cannot use {{output_dir}} — its default contains {{repo_path}} which
           # the template engine does not recursively resolve (Known Gotcha #5).
-          output_dir = "{{scan_result.output_dir}}"
+          # Cannot use {{scan_result.output_dir}} — scan_result does not exist
+          # when parent_topics_available="true" (scan step is skipped).
+          import os
           repo_path = "{{repo_path}}"
+          output_dir = os.path.join(repo_path, ".discovery", "investigation", "topdown")
           fidelity = "{{fidelity}}"
 
           # Get current git commit
