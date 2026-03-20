@@ -345,9 +345,9 @@ stages:
           from pathlib import Path
 
           # Resolve output_dir from repo_path in Python at runtime.
-          # Cannot use {{output_dir}} — its default contains {{repo_path}} which
+          # Cannot use the raw output_dir context var — its default contains {{repo_path}} which
           # the template engine does not recursively resolve (Known Gotcha #5).
-          # Cannot use {{prescan_result.*}} — may not exist if recipe is called
+          # Cannot use prescan_result.* — may not exist if recipe is called
           # as a sub-recipe where prescan was handled externally.
           import os
           repo_path = "{{repo_path}}"

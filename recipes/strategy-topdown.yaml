@@ -342,9 +342,9 @@ stages:
           from pathlib import Path
 
           # Resolve output_dir from repo_path in Python at runtime.
-          # Cannot use {{output_dir}} — its default contains {{repo_path}} which
+          # Cannot use the raw output_dir context var — its default contains {{repo_path}} which
           # the template engine does not recursively resolve (Known Gotcha #5).
-          # Cannot use {{scan_result.output_dir}} — scan_result does not exist
+          # Cannot use scan_result.output_dir — scan_result does not exist
           # when parent_topics_available="true" (scan step is skipped).
           import os
           repo_path = "{{repo_path}}"
